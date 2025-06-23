@@ -27,6 +27,14 @@
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
     },
-    "platforms": ["ios", "android", "web"]
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "plugins": [
+      "expo-sqlite"
+    ],
+    "jsEngine": "jsc"
   }
-} 
+}

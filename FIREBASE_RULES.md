@@ -45,8 +45,15 @@ Ve a **Storage** > **Reglas** y reemplaza con:
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Imágenes y videos de ejercicios (solo admins pueden subir)
-    match /exercises/{allPaths=**} {
+    // Videos de ejercicios (solo admins pueden subir)
+    match /videos/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "ADMIN";
+    }
+    
+    // Imágenes de ejercicios (solo admins pueden subir)
+    match /exercises/thumbnails/{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && 
         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "ADMIN";
@@ -65,7 +72,7 @@ service firebase.storage {
 ### 1. Configurar Authentication
 1. Ve a **Authentication** > **Sign-in method**
 2. Habilita **Correo electrónico/contraseña**
-3. Habilita **Google** (opcional)
+3. Habilita **Google** (opcional para futuras funcionalidades)
 
 ### 2. Crear Usuario Admin
 1. Ve a **Authentication** > **Users**
@@ -84,14 +91,14 @@ service firebase.storage {
 {
   "uid": "[UID del usuario admin]",
   "email": "admin@iconik.com",
-  "displayName": "Administrador",
+  "name": "Administrador",
   "role": "ADMIN",
   "createdAt": "2024-01-01T00:00:00.000Z",
-  "membershipType": "premium",
+  "membershipStart": "2024-01-01T00:00:00.000Z",
   "membershipEnd": "2025-12-31T23:59:59.999Z",
+  "age": 30,
   "weight": 80,
-  "height": 180,
-  "age": 30
+  "height": 180
 }
 ```
 
@@ -99,7 +106,7 @@ service firebase.storage {
 1. **Prueba registro:** Crea una nueva cuenta en la app
 2. **Prueba login:** Inicia sesión con credenciales reales
 3. **Prueba admin:** Usa `admin@iconik.com` / `admin123`
-4. **Prueba subida:** Como admin, sube un ejercicio con imagen/video
+4. **Prueba subida:** Como admin, sube un ejercicio con video
 
 ## ✅ Estado Actual
 
@@ -107,10 +114,12 @@ service firebase.storage {
 - 🔥 **SDK completo** configurado
 - 🔥 **Servicios actualizados** para Firebase real
 - 🔥 **Reglas de seguridad** listas para configurar
+- 🔥 **Nuevo proyecto**: app-iconik-pro
 
 ## 🚨 Importante
 
 - ❌ **Credenciales mock ya NO funcionan**
 - ✅ **Solo usuarios reales** de Firebase pueden acceder
 - ✅ **Admin debe ser creado** manualmente en Firebase Console
-- ✅ **Reglas de seguridad** deben configurarse para funcionar correctamente 
+- ✅ **Reglas de seguridad** deben configurarse para funcionar correctamente
+- ✅ **Nuevo proyecto**: app-iconik-pro (no conikprogym) 

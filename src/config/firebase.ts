@@ -5,11 +5,12 @@
 // Para cambiar a modo mock, cambia USE_MOCK_FIREBASE a true
 const USE_MOCK_FIREBASE = false; // ✅ Cambiado a false para usar Firebase real
 
-console.log(USE_MOCK_FIREBASE ? "🧪 Firebase: Usando modo Mock para desarrollo" : "🔥 Firebase: Usando configuración real");
+console.log("🔥 Firebase: Usando configuración real");
 
 import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
+import { getAnalytics } from "firebase/analytics";
+import {
+  getAuth, // Usar getAuth, Firebase detectará React Native automáticamente
   signInWithEmailAndPassword as firebaseSignIn,
   createUserWithEmailAndPassword as firebaseCreateUser,
   signOut as firebaseSignOut,
@@ -17,42 +18,56 @@ import {
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   User
 } from "firebase/auth";
-import { 
-  getFirestore, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy, 
-  limit, 
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  limit,
   serverTimestamp,
   Timestamp
 } from "firebase/firestore";
-import { 
-  getStorage, 
-  ref, 
-  uploadBytes, 
-  getDownloadURL, 
-  deleteObject 
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
 } from "firebase/storage";
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDZoK4MZ8ORqD6nfMswbZMLmSNsZoS1X-w",
-  authDomain: "conikprogym.firebaseapp.com",
-  projectId: "conikprogym",
-  storageBucket: "conikprogym.firebasestorage.app",
-  messagingSenderId: "113622948013",
-  appId: "1:113622948013:web:5eecb446a91a47d1b44e24"
+  apiKey: "AIzaSyAOTdkF5ikku9iRSy6w2qlLGOJaF7GEoS8",
+  authDomain: "app-iconik-pro.firebaseapp.com",
+  projectId: "app-iconik-pro",
+  storageBucket: "app-iconik-pro.firebasestorage.app",
+  messagingSenderId: "375868728099",
+  appId: "1:375868728099:web:dc214ba8eeb00c2f3b6296",
+  measurementId: "G-NLR7KCLB7H"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+// Initialize Analytics (solo funciona en web, en móvil es opcional)
+// let analytics;
+// try {
+//   analytics = getAnalytics(app);
+// } catch (error: any) {
+//   console.log("Analytics no disponible en este entorno:", error.message);
+// }
+
+// Usar getAuth es suficiente. En RN, automáticamente usa persistencia.
 export const auth = getAuth(app);
+
 export const firestore = getFirestore(app);
 export const storage = getStorage(app);
 export { serverTimestamp, Timestamp };
