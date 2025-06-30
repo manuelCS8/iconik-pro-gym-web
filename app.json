@@ -38,7 +38,20 @@
     ],
     "plugins": [
       "expo-sqlite",
-      "@react-native-firebase/app"
+      "@react-native-firebase/app",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La aplicación necesita acceso a tus fotos para seleccionar imágenes de ejercicios.",
+          "cameraPermission": "La aplicación necesita acceso a la cámara para tomar fotos de ejercicios."
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.tuempresa.iconikprogym"
+        }
+      ]
     ],
     "jsEngine": "jsc"
   }
