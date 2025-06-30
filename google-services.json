@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "375868728099",
+    "project_id": "app-iconik-pro",
+    "storage_bucket": "app-iconik-pro.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375868728099:android:d43d836d542c27873b6296",
+        "android_client_info": {
+          "package_name": "com.tuempresa.iconikprogym"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDslyn4Z6Ozv8Y4Ttsm6y2vwtsf6qX5Nvo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+} 
