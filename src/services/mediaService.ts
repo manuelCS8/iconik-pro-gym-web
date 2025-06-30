@@ -145,18 +145,15 @@ export const showMediaOptions = async (type: 'image' | 'video' | 'both' = 'both'
 };
 
 // Función para subir media a Firebase Storage
-export const uploadMediaToFirebase = async (uri: string, path: string) => {
+export const uploadMediaToFirebase = async (
+  uri: string, 
+  path: string,
+  onProgress?: (progress: any) => void
+) => {
   try {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    
-    // Aquí necesitarías importar Firebase Storage
-    // const storageRef = ref(storage, path);
-    // const snapshot = await uploadBytes(storageRef, blob);
-    // const downloadURL = await getDownloadURL(snapshot.ref);
-    
-    // Por ahora retornamos la URI local
-    return uri;
+    const { uploadFile } = await import('./storage');
+    const result = await uploadFile(uri, path, onProgress);
+    return result.url;
   } catch (error) {
     console.error('Error uploading media to Firebase:', error);
     throw error;
