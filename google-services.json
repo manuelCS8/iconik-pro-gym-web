@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:375868728099:android:d43d836d542c27873b6296",
+        "mobilesdk_app_id": "1:375868728099:web:dc214ba8eeb00c2f3b6296",
         "android_client_info": {
           "package_name": "com.tuempresa.iconikprogym"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDslyn4Z6Ozv8Y4Ttsm6y2vwtsf6qX5Nvo"
+          "current_key": "AIzaSyAOTdkF5ikku9iRSy6w2qlLGOJaF7GEoS8"
         }
       ],
       "services": {
