@@ -4,16 +4,8 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { COLORS, SIZES, GLOBAL_STYLES } from '../../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  firestore, 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy, 
-  limit 
-} from '../../config/firebase';
 import RoleGuard from '../../components/RoleGuard';
+import { useNavigation } from '@react-navigation/native';
 
 interface AdminStats {
   totalMembers: number;
@@ -45,6 +37,8 @@ const AdminDashboard: React.FC = () => {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const navigation = useNavigation<any>();
+  const user = useSelector((state: RootState) => state.auth.user);
 
   useEffect(() => {
     loadDashboardData();
@@ -195,210 +189,86 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <RoleGuard 
-      requiredRole="ADMIN" 
-      fallbackMessage="Solo los administradores pueden acceder al panel de control."
-    >
-      <ScrollView 
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-        }
-      >
+    <View style={styles.container}> 
       <View style={styles.header}>
-        <Text style={styles.title}>Panel de Administración</Text>
+        <Text style={styles.welcomeText}>
+          Bienvenido{user?.name ? `, ${user.name}` : ''}
+        </Text>
         <Text style={styles.subtitle}>Iconik Pro Gym</Text>
       </View>
-
-      <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Estadísticas Generales</Text>
-        
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{stats.activeMembers}</Text>
-            <Text style={styles.statLabel}>Miembros Activos</Text>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+        <View style={styles.content}>
+          <Text style={styles.sectionTitle}>Estadísticas Generales</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}><Text style={styles.statNumber}>{stats.activeMembers}</Text><Text style={styles.statLabel}>Miembros Activos</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNumber}>{stats.totalMembers}</Text><Text style={styles.statLabel}>Total Miembros</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNumber}>{stats.totalExercises}</Text><Text style={styles.statLabel}>Ejercicios</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNumber}>{stats.totalRoutines}</Text><Text style={styles.statLabel}>Rutinas Oficiales</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNumber}>{stats.todayWorkouts}</Text><Text style={styles.statLabel}>Entrenamientos Hoy</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNumber}>{formatNumber(stats.totalVolume)} kg</Text><Text style={styles.statLabel}>Volumen Total</Text></View>
           </View>
-          
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{stats.totalMembers}</Text>
-            <Text style={styles.statLabel}>Total Miembros</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{stats.totalExercises}</Text>
-            <Text style={styles.statLabel}>Ejercicios</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{stats.totalRoutines}</Text>
-            <Text style={styles.statLabel}>Rutinas Oficiales</Text>
-          </View>
-        </View>
-
-        {/* Estadísticas adicionales */}
-        <View style={styles.extraStatsContainer}>
-          <View style={styles.extraStatCard}>
-            <Ionicons name="fitness" size={24} color={COLORS.primary} />
-            <Text style={styles.extraStatNumber}>{stats.todayWorkouts}</Text>
-            <Text style={styles.extraStatLabel}>Entrenamientos Hoy</Text>
-          </View>
-          
-          <View style={styles.extraStatCard}>
-            <Ionicons name="barbell" size={24} color={COLORS.secondary} />
-            <Text style={styles.extraStatNumber}>{formatNumber(stats.totalVolume)} kg</Text>
-            <Text style={styles.extraStatLabel}>Volumen Total</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Acciones Rápidas</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('GestionTab', { screen: 'ManageMembers' })}>
+              <Ionicons name="person-add" size={20} color={COLORS.white} />
+              <Text style={styles.actionButtonText}>Agregar Nuevo Miembro</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('GestionTab', { screen: 'ManageRoutines' })}>
+              <Ionicons name="add-circle" size={20} color={COLORS.white} />
+              <Text style={styles.actionButtonText}>Crear Nueva Rutina</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('GestionTab', { screen: 'ManageExercises' })}>
+              <Ionicons name="fitness" size={20} color={COLORS.white} />
+              <Text style={styles.actionButtonText}>Agregar Ejercicio</Text>
+            </TouchableOpacity>
           </View>
         </View>
-
-        {/* Acciones rápidas */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Acciones Rápidas</Text>
-          
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="person-add" size={20} color={COLORS.white} />
-            <Text style={styles.actionButtonText}>Agregar Nuevo Miembro</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="add-circle" size={20} color={COLORS.white} />
-            <Text style={styles.actionButtonText}>Crear Nueva Rutina</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="fitness" size={20} color={COLORS.white} />
-            <Text style={styles.actionButtonText}>Agregar Ejercicio</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: COLORS.info }]}>
-            <Ionicons name="stats-chart" size={20} color={COLORS.white} />
-            <Text style={styles.actionButtonText}>Ver Reportes</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Actividad reciente */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Actividad Reciente</Text>
-          
-          {recentActivity.map((activity) => (
-            <View key={activity.id} style={styles.activityItem}>
-              <View style={[styles.activityIcon, { backgroundColor: getActivityColor(activity.type) }]}>
-                <Ionicons 
-                  name={getActivityIcon(activity.type) as any} 
-                  size={16} 
-                  color={COLORS.white} 
-                />
-              </View>
-              
-              <View style={styles.activityContent}>
-                <Text style={styles.activityDescription}>{activity.description}</Text>
-                <Text style={styles.activityUser}>{activity.userName} • {formatTimeAgo(activity.timestamp)}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
-    </ScrollView>
-    </RoleGuard>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    ...GLOBAL_STYLES.container,
-  },
+  container: { flex: 1, backgroundColor: '#000' },
   header: {
     padding: SIZES.paddingLarge,
     backgroundColor: COLORS.primary,
   },
-  title: {
-    fontSize: SIZES.fontLarge,
+  welcomeText: {
+    fontSize: 26,
     fontWeight: 'bold',
-    color: COLORS.white,
-    marginBottom: 4,
+    color: '#fff',
+    marginTop: 24,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: SIZES.fontRegular,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   content: {
     padding: SIZES.padding,
   },
   sectionTitle: {
-    fontSize: SIZES.fontMedium,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: SIZES.margin,
-    color: COLORS.secondary,
+    marginBottom: 18,
+    color: '#fff',
   },
-  statsContainer: {
+  statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: SIZES.margin,
   },
-  statCard: {
-    ...GLOBAL_STYLES.card,
-    width: '48%',
-    marginBottom: SIZES.margin / 2,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: SIZES.fontLarge,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: SIZES.fontSmall,
-    color: COLORS.gray,
-    textAlign: 'center',
-  },
-  extraStatsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SIZES.margin,
-  },
-  extraStatCard: {
-    ...GLOBAL_STYLES.card,
-    flex: 1,
-    marginHorizontal: 4,
-    marginBottom: 0,
-    alignItems: 'center',
-  },
-  extraStatNumber: {
-    fontSize: SIZES.fontMedium,
-    fontWeight: 'bold',
-    color: COLORS.secondary,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  extraStatLabel: {
-    fontSize: SIZES.fontSmall,
-    color: COLORS.gray,
-    textAlign: 'center',
-  },
-  card: {
-    ...GLOBAL_STYLES.card,
-  },
-  cardTitle: {
-    fontSize: SIZES.fontMedium,
-    fontWeight: 'bold',
-    marginBottom: SIZES.margin,
-    color: COLORS.secondary,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    padding: SIZES.padding,
-    borderRadius: SIZES.radius,
-    marginBottom: SIZES.margin / 2,
-  },
-  actionButtonText: {
-    color: COLORS.white,
-    fontSize: SIZES.fontRegular,
-    fontWeight: 'bold',
-    marginLeft: SIZES.padding / 2,
-  },
+  statCard: { backgroundColor: '#222', borderRadius: 12, padding: 18, alignItems: 'center', margin: 6, flex: 1, minWidth: 140 },
+  statNumber: { color: COLORS.primary, fontSize: 24, fontWeight: 'bold' },
+  statLabel: { color: '#eee', fontSize: 15, marginTop: 4, textAlign: 'center' },
+  card: { backgroundColor: '#222', borderRadius: 16, padding: 18, marginTop: 24, marginBottom: 12 },
+  cardTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 12 },
+  actionButton: { backgroundColor: COLORS.primary, borderRadius: 8, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16, marginLeft: 8 },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',

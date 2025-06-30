@@ -100,14 +100,6 @@ const AdminNavigator: React.FC = () => (
         tabBarLabel: "Gestión",
       }}
     />
-    <Tab.Screen
-      name="PerfilTab"
-      component={ProfileScreen}
-      options={{
-        tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={28} />,
-        tabBarLabel: "Perfil",
-      }}
-    />
   </Tab.Navigator>
 );
 

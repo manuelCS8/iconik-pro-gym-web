@@ -32,76 +32,31 @@ const AdminManagementScreen: React.FC = () => {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>🛠️ Gestión</Text>
-          <Text style={styles.subtitle}>Panel de administración</Text>
-        </View>
-
-        {/* Management Options */}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>🔧 <Text style={{ color: COLORS.primary }}>Gestión</Text></Text>
+        <Text style={styles.subtitle}>Panel de administración</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         <View style={styles.optionsContainer}>
-          {managementOptions.map((option, index) => (
+          {managementOptions.map((option, idx) => (
             <TouchableOpacity
-              key={index}
+              key={option.title}
               style={[styles.optionCard, { borderLeftColor: option.color }]}
               onPress={() => navigation.navigate(option.screen)}
             >
-              <View style={styles.optionContent}>
-                <View style={[styles.iconContainer, { backgroundColor: option.color }]}>
-                  <Ionicons name={option.icon as any} size={28} color="#fff" />
-                </View>
-                <View style={styles.textContainer}>
-                  <Text style={styles.optionTitle}>{option.title}</Text>
-                  <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#ccc" />
+              <View style={[styles.iconCircle, { backgroundColor: option.color }]}> 
+                <Ionicons name={option.icon as any} size={32} color="#fff" />
+              </View>
+              <View style={styles.optionTextContainer}>
+                <Text style={styles.optionTitle}>{option.title}</Text>
+                <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
               </View>
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          <Text style={styles.statsTitle}>📊 Resumen Rápido</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>24</Text>
-              <Text style={styles.statLabel}>Miembros Activos</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>15</Text>
-              <Text style={styles.statLabel}>Ejercicios</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>8</Text>
-              <Text style={styles.statLabel}>Rutinas</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Recent Activity */}
-        <View style={styles.activityContainer}>
-          <Text style={styles.activityTitle}>🕒 Actividad Reciente</Text>
-          <View style={styles.activityItem}>
-            <View style={styles.activityDot} />
-            <Text style={styles.activityText}>Nuevo miembro registrado</Text>
-            <Text style={styles.activityTime}>Hace 2h</Text>
-          </View>
-          <View style={styles.activityItem}>
-            <View style={styles.activityDot} />
-            <Text style={styles.activityText}>Ejercicio actualizado</Text>
-            <Text style={styles.activityTime}>Hace 4h</Text>
-          </View>
-          <View style={styles.activityItem}>
-            <View style={styles.activityDot} />
-            <Text style={styles.activityText}>Rutina creada</Text>
-            <Text style={styles.activityTime}>Ayer</Text>
-          </View>
-        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -110,69 +65,60 @@ export default AdminManagementScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background || '#f5f5f5',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: SIZES.padding || 20,
+    backgroundColor: '#000',
   },
   header: {
-    marginBottom: 30,
+    padding: 24,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.primary || '#ff4444',
-    marginBottom: 8,
+    color: '#fff',
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.text || '#666',
-    textAlign: 'center',
+    color: '#fff',
+    opacity: 0.8,
+    marginBottom: 12,
   },
   optionsContainer: {
-    marginBottom: 30,
+    marginTop: 24,
+    paddingHorizontal: 16,
   },
   optionCard: {
-    backgroundColor: COLORS.white || '#fff',
-    borderRadius: 12,
-    marginBottom: 15,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  optionContent: {
+    backgroundColor: '#222',
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    padding: 18,
+    marginBottom: 18,
+    borderLeftWidth: 6,
   },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
+  iconCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     alignItems: 'center',
-    marginRight: 15,
+    justifyContent: 'center',
+    marginRight: 18,
   },
-  textContainer: {
+  optionTextContainer: {
     flex: 1,
   },
   optionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.text || '#333',
-    marginBottom: 4,
+    color: '#fff',
   },
   optionSubtitle: {
-    fontSize: 14,
-    color: COLORS.text || '#666',
+    fontSize: 15,
+    color: '#ccc',
+    marginTop: 2,
   },
   statsContainer: {
     backgroundColor: COLORS.white || '#fff',

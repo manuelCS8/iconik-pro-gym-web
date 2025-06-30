@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { View, Button, Alert, StyleSheet, TextInput } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import { storage, firestore } from "../config/firebase";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 export default function CreateExerciseScreen() {
   const [videoUri, setVideoUri] = useState<string | null>(null);

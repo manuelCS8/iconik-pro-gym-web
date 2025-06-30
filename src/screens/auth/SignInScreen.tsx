@@ -70,67 +70,12 @@ const SignInScreen: React.FC = () => {
         setIsLoading(false);
         return;
       }
-      
-      // ✅ 2. Para usuarios reales, usar Firebase Auth
-      console.log("🔥 Intentando login con Firebase Auth...");
-      const { auth, signInWithEmailAndPassword, doc, firestore, getDoc } = await import("../../config/firebase");
-      
-      // Check if we're in mock mode by checking if auth is mocked
-      const isMockMode = typeof auth.signInWithEmailAndPassword === 'function' && 
-                        auth.signInWithEmailAndPassword.toString().includes('Promise.resolve');
-      
-      if (isMockMode) {
-        // In mock mode, reject non-demo accounts with a helpful message
-        throw new Error("auth/mock-mode-only-demo");
-      }
-      
-      const userCredential = await signInWithEmailAndPassword(auth, emailTrimmed, password);
-      const user = userCredential.user;
-      
-      // Obtener datos del usuario desde Firestore
-      const userDoc = await getDoc(doc(firestore, "users", user.uid));
-      if (!userDoc.exists()) {
-        throw new Error("auth/user-data-not-found");
-      }
-      
-      const userData = userDoc.data();
-      dispatch(setUser({
-        uid: user.uid,
-        email: emailTrimmed,
-        role: userData.role || "MEMBER",
-        membershipEnd: userData.membershipEnd,
-        name: userData.name,
-        weight: userData.weight,
-        height: userData.height,
-        age: userData.age,
-      }));
-      
-      console.log("✅ Login con Firebase exitoso");
-      
-    } catch (error: any) {
-      console.error("❌ Error de autenticación:", error);
+      // Si no es demo, muestra error
+      Alert.alert("Error", "Solo están habilitadas las credenciales demo.");
       setIsLoading(false);
-      
-      // Mostrar error específico
-      let errorMessage = "Error al iniciar sesión";
-      if (error.message?.includes('auth/user-not-found') || error.code === 'auth/user-not-found') {
-        errorMessage = "Usuario no encontrado. Usa las credenciales demo para probar la app.";
-      } else if (error.message?.includes('auth/user-data-not-found')) {
-        errorMessage = "Usuario autenticado pero sin datos en la base de datos. Contacta al administrador.";
-      } else if (error.message?.includes('auth/mock-mode-only-demo')) {
-        errorMessage = "La app está en modo demostración. Solo se permiten las credenciales demo.";
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = "Contraseña incorrecta. Verifica tus credenciales.";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "Formato de correo inválido.";
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = "Esta cuenta ha sido deshabilitada.";
-      }
-      
-      Alert.alert(
-        "Error de autenticación", 
-        `${errorMessage}\n\n💡 Para pruebas usa:\n🛠️ Admin: admin@iconik.com / admin123\n👤 Miembro: member@iconik.com / member123`
-      );
+    } catch (error) {
+      setIsLoading(false);
+      Alert.alert("Error", "Ocurrió un error inesperado.");
     }
   };
 

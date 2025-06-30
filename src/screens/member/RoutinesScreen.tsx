@@ -227,7 +227,7 @@ const RoutinesScreen: React.FC = () => {
         placeholder="Buscar rutinas..."
         value={searchText}
         onChangeText={setSearchText}
-        placeholderTextColor={COLORS.gray}
+        placeholderTextColor="#ccc"
       />
 
       {/* Filtros */}
@@ -238,7 +238,7 @@ const RoutinesScreen: React.FC = () => {
           placeholder="Grupo Muscular"
           boxStyles={styles.selectBox}
           dropdownStyles={styles.dropdown}
-          inputStyles={{ color: COLORS.secondary }}
+          inputStyles={{ color: '#ccc' }}
           defaultOption={{ key: "", value: "Todos" }}
         />
         <SelectList
@@ -247,7 +247,7 @@ const RoutinesScreen: React.FC = () => {
           placeholder="Equipo"
           boxStyles={styles.selectBox}
           dropdownStyles={styles.dropdown}
-          inputStyles={{ color: COLORS.secondary }}
+          inputStyles={{ color: '#ccc' }}
           defaultOption={{ key: "", value: "Todos" }}
         />
       </View>
@@ -281,18 +281,18 @@ export default RoutinesScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#000', // Fondo negro
     padding: SIZES.padding,
   },
   searchInput: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#181818', // Gris oscuro
     padding: SIZES.padding,
     borderRadius: SIZES.radius,
     fontSize: SIZES.fontRegular,
     marginBottom: SIZES.padding,
     borderWidth: 1,
-    borderColor: COLORS.grayLight,
-    color: COLORS.secondary,
+    borderColor: '#333', // Gris más oscuro
+    color: '#fff', // Texto blanco
   },
   filtersRow: {
     flexDirection: "row",
@@ -300,47 +300,49 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.padding,
   },
   selectBox: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#181818', // Gris oscuro
     borderRadius: SIZES.radius,
     width: (windowWidth - SIZES.padding * 2 - 16) / 2,
-    borderColor: COLORS.grayLight,
+    borderColor: '#333',
     borderWidth: 1,
     paddingHorizontal: 8,
   },
   dropdown: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.grayLight,
+    backgroundColor: '#181818',
+    borderColor: '#333',
     marginTop: -8,
   },
   clearButton: {
     alignSelf: "center",
-    backgroundColor: COLORS.gray,
+    backgroundColor: '#333', // Gris oscuro
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.padding / 2,
     borderRadius: SIZES.radius,
     marginBottom: SIZES.padding,
   },
   clearButtonText: {
-    color: COLORS.white,
+    color: '#fff',
     fontSize: SIZES.fontSmall,
     fontWeight: "bold",
   },
   resultsCounter: {
     fontSize: SIZES.fontSmall,
-    color: COLORS.gray,
+    color: '#aaa', // Gris claro
     marginBottom: SIZES.padding,
     textAlign: "center",
   },
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#181818', // Gris oscuro
     borderRadius: SIZES.radius,
     padding: SIZES.padding,
     marginBottom: SIZES.padding,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#222',
   },
   cardHeader: {
     flexDirection: "row",
@@ -351,23 +353,29 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: SIZES.fontRegular,
     fontWeight: "bold",
-    color: COLORS.secondary,
+    color: '#fff', // Blanco
     flex: 1,
   },
   levelBadge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 8,
+    backgroundColor: '#222', // Badge más oscuro
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: SIZES.radius / 2,
+    borderWidth: 1,
+    borderColor: '#444',
+    minWidth: 80,
+    alignItems: 'center',
   },
   levelText: {
     fontSize: SIZES.fontSmall,
-    color: COLORS.white,
     fontWeight: "bold",
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   cardDescription: {
     fontSize: SIZES.fontSmall,
-    color: COLORS.grayDark,
+    color: '#ccc', // Gris claro
     marginBottom: 8,
     lineHeight: 18,
   },
@@ -376,18 +384,25 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontSize: SIZES.fontSmall,
-    color: COLORS.gray,
+    color: '#aaa', // Gris claro
     marginBottom: 2,
   },
   cardButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primary, // Rojo
     paddingVertical: SIZES.padding / 2,
     borderRadius: SIZES.radius,
     alignItems: "center",
+    shadowColor: '#E31C1F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+    marginTop: 4,
   },
   cardButtonText: {
-    color: COLORS.white,
+    color: '#fff',
     fontSize: SIZES.fontRegular,
     fontWeight: "bold",
+    letterSpacing: 0.5,
   },
 }); 

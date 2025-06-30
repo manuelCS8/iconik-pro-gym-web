@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Dimensions } from "react-native";
-import { firestore, collection, query, where, getDocs, Timestamp, orderBy } from "../config/firebase";
 
 const screenWidth = Dimensions.get("window").width;
 

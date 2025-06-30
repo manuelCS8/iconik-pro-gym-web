@@ -16,20 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { COLORS, SIZES } from '../../utils/theme';
-import {
-  firestore,
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  storage,
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from '../../config/firebase';
 import RoleGuard from '../../components/RoleGuard';
 
 interface Exercise {

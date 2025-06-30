@@ -13,17 +13,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, GLOBAL_STYLES } from '../../utils/theme';
-import {
-  firestore,
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  createUserWithEmailAndPassword,
-  auth
-} from '../../config/firebase';
 import RoleGuard from '../../components/RoleGuard';
 
 interface Member {

@@ -4,7 +4,6 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
 import { SIZES } from "../../utils/theme";
 import { useTheme } from "../../contexts/ThemeContext";
-import { firestore, collection, query, where, getDocs, doc, getDoc } from "../../config/firebase";
 import syncService from "../../services/syncService";
 import ConnectionStatus from "../../components/ConnectionStatus";
 import ArtisticBackground from "../../components/ArtisticBackground";
@@ -268,9 +267,7 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.reminderText}>
                 Recordatorio: Próximo pago de
               </Text>
-              <Text style={[styles.reminderDate, { color: getMembershipReminderColor() }]}>
-                Membresía es {formatDate(membershipEnd)}
-              </Text>
+              <Text style={[styles.reminderDate, { color: getMembershipReminderColor() }]}>Membresía es {formatDate(membershipEnd)}</Text>
             </TouchableOpacity>
           ) : null}
 

@@ -1,6 +1,4 @@
 import NetInfo from '@react-native-community/netinfo';
-import { addDoc, collection } from '../config/firebase';
-import { firestore } from '../config/firebase';
 import sqliteService, { LocalTrainingRecord } from './sqliteService';
 
 class SyncService {
@@ -69,17 +67,17 @@ class SyncService {
     if (this.isOnline) {
       try {
         // Intentar guardar directamente en Firestore
-        await addDoc(collection(firestore, 'records'), {
-          userId: record.userId,
-          routineId: record.routineId,
-          exerciseId: record.exerciseId,
-          exerciseName: record.exerciseName,
-          series: record.series,
-          reps: record.reps,
-          weight: record.weight,
-          timestamp: record.timestamp,
-          createdAt: new Date(),
-        });
+        // await addDoc(collection(firestore, 'records'), {
+        //   userId: record.userId,
+        //   routineId: record.routineId,
+        //   exerciseId: record.exerciseId,
+        //   exerciseName: record.exerciseName,
+        //   series: record.series,
+        //   reps: record.reps,
+        //   weight: record.weight,
+        //   timestamp: record.timestamp,
+        //   createdAt: new Date(),
+        // });
 
         console.log('✅ Record saved directly to Firestore');
         return { success: true, savedLocally: false };
@@ -112,17 +110,17 @@ class SyncService {
 
       for (const record of unsyncedRecords) {
         try {
-          await addDoc(collection(firestore, 'records'), {
-            userId: record.userId,
-            routineId: record.routineId,
-            exerciseId: record.exerciseId,
-            exerciseName: record.exerciseName,
-            series: record.series,
-            reps: record.reps,
-            weight: record.weight,
-            timestamp: record.timestamp,
-            createdAt: new Date(record.timestamp),
-          });
+          // await addDoc(collection(firestore, 'records'), {
+          //   userId: record.userId,
+          //   routineId: record.routineId,
+          //   exerciseId: record.exerciseId,
+          //   exerciseName: record.exerciseName,
+          //   series: record.series,
+          //   reps: record.reps,
+          //   weight: record.weight,
+          //   timestamp: record.timestamp,
+          //   createdAt: new Date(record.timestamp),
+          // });
 
           // Marcar como sincronizado
           if (record.id) {

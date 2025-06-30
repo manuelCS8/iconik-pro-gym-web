@@ -524,7 +524,9 @@ const RoutineDetail: React.FC = () => {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: '#222', marginRight: 8, justifyContent: 'center', alignItems: 'center' }} />
-                <Text style={{ color: '#E31C1F', fontWeight: 'bold', fontSize: 15, marginRight: 6 }}>{ex.exerciseName}</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: ex.id })}>
+                  <Text style={{ color: '#E31C1F', fontWeight: 'bold', fontSize: 15, marginRight: 6, textDecorationLine: 'underline' }}>{ex.exerciseName}</Text>
+                </TouchableOpacity>
                 <View style={{ backgroundColor: '#E31C1F', borderRadius: 5, paddingHorizontal: 7, paddingVertical: 1, marginLeft: 2, alignSelf: 'flex-start' }}>
                   <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>{ex.muscleGroup}</Text>
                 </View>

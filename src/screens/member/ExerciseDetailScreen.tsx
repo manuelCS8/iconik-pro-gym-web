@@ -15,6 +15,7 @@ import { COLORS, SIZES } from "../../utils/theme";
 type RouteParams = {
   ExerciseDetail: {
     exerciseId: string;
+    exerciseName?: string;
   };
 };
 
@@ -154,15 +155,21 @@ const MOCK_EXERCISES: Record<string, Exercise> = {
 const ExerciseDetailScreen: React.FC = () => {
   const route = useRoute<RouteProp<RouteParams, "ExerciseDetail">>();
   const navigation = useNavigation();
-  const { exerciseId } = route.params;
+  const { exerciseId, exerciseName } = (route.params as any) || {};
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadExercise = async () => {
       try {
-        // Simular carga desde "base de datos"
-        const exerciseData = MOCK_EXERCISES[exerciseId];
+        // Buscar por ID
+        let exerciseData = MOCK_EXERCISES[exerciseId];
+        // Si no existe por ID, buscar por nombre
+        if (!exerciseData && exerciseName) {
+          exerciseData = Object.values(MOCK_EXERCISES).find(
+            (ex) => ex.name.toLowerCase() === exerciseName.toLowerCase()
+          );
+        }
         if (exerciseData) {
           setExercise(exerciseData);
         }
@@ -175,7 +182,7 @@ const ExerciseDetailScreen: React.FC = () => {
     };
 
     loadExercise();
-  }, [exerciseId]);
+  }, [exerciseId, exerciseName]);
 
   if (loading) {
     return (

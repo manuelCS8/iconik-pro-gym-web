@@ -9,7 +9,6 @@ import {
   ScrollView,
   SafeAreaView,
 } from "react-native";
-import { auth, firestore, createUserWithEmailAndPassword, doc, setDoc } from "../../config/firebase";
 import { useDispatch } from "react-redux";
 import { setUser } from "../../redux/slices/authSlice";
 import { useNavigation } from "@react-navigation/native";

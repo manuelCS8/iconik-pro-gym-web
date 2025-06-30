@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { View, TextInput, Button, Alert, StyleSheet } from "react-native";
-import { createUserWithEmailAndPassword, firestore, serverTimestamp } from "../config/firebase";
-import { doc, setDoc } from "firebase/firestore";
 
 export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -9,19 +7,7 @@ export default function SignUpScreen({ navigation }) {
 
   const onSignUp = async () => {
     try {
-      const data = await createUserWithEmailAndPassword(email, password);
-      const userId = data.localId;
-      await setDoc(doc(firestore, "users", userId), {
-        email: email,
-        role: "MEMBER",
-        membershipStart: serverTimestamp(),
-        membershipEnd: null,
-        weight: null,
-        height: null,
-        age: null,
-        createdAt: serverTimestamp(),
-      });
-      navigation.replace("EntrenarTab");
+      // ... existing code ...
     } catch (error: any) {
       Alert.alert("Error al registrarse", error.message);
     }

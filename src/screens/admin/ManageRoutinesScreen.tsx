@@ -13,18 +13,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../utils/theme';
-import {
-  firestore,
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query,
-  where,
-} from '../../config/firebase';
-import RoleGuard from '../../components/RoleGuard';
 
 interface Exercise {
   id: string;
@@ -529,228 +517,223 @@ const ManageRoutinesScreen: React.FC = () => {
   );
 
   return (
-    <RoleGuard 
-      requiredRole="ADMIN" 
-      fallbackMessage="Solo los administradores pueden gestionar las rutinas del gimnasio."
-    >
-      <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Rutinas Oficiales</Text>
+    <View style={styles.container}>
+    {/* Header */}
+    <View style={styles.header}>
+      <View style={styles.headerTop}>
+        <Text style={styles.title}>Rutinas Oficiales</Text>
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <Ionicons name="add-circle" size={20} color={COLORS.white} />
+          <Text style={styles.createButtonText}>Crear</Text>
+        </TouchableOpacity>
+      </View>
+      
+      {/* Filtros y búsqueda */}
+      <View style={styles.filtersContainer}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={COLORS.gray} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar rutinas..."
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholderTextColor={COLORS.gray}
+          />
+        </View>
+        
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterTags}
+        >
           <TouchableOpacity 
-            style={styles.createButton}
-            onPress={() => setShowCreateModal(true)}
+            style={[styles.filterTag, filterLevel === 'All' && styles.activeFilterTag]}
+            onPress={() => setFilterLevel('All')}
           >
-            <Ionicons name="add-circle" size={20} color={COLORS.white} />
-            <Text style={styles.createButtonText}>Crear</Text>
+            <Text style={[styles.filterTagText, filterLevel === 'All' && styles.activeFilterTagText]}>
+              Todas
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.filterTag, filterLevel === 'Principiante' && styles.activeFilterTag]}
+            onPress={() => setFilterLevel('Principiante')}
+          >
+            <Text style={[styles.filterTagText, filterLevel === 'Principiante' && styles.activeFilterTagText]}>
+              Principiante
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.filterTag, filterLevel === 'Intermedio' && styles.activeFilterTag]}
+            onPress={() => setFilterLevel('Intermedio')}
+          >
+            <Text style={[styles.filterTagText, filterLevel === 'Intermedio' && styles.activeFilterTagText]}>
+              Intermedio
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.filterTag, filterLevel === 'Avanzado' && styles.activeFilterTag]}
+            onPress={() => setFilterLevel('Avanzado')}
+          >
+            <Text style={[styles.filterTagText, filterLevel === 'Avanzado' && styles.activeFilterTagText]}>
+              Avanzado
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+      
+      <Text style={styles.resultsText}>
+        {filteredRoutines.length} rutina{filteredRoutines.length !== 1 ? 's' : ''} oficial{filteredRoutines.length !== 1 ? 'es' : ''}
+      </Text>
+    </View>
+
+    {/* Lista de rutinas */}
+    <FlatList
+      data={filteredRoutines}
+      renderItem={renderRoutine}
+      keyExtractor={item => item.id}
+      style={styles.list}
+      contentContainerStyle={styles.listContent}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+      }
+      ListEmptyComponent={
+        <View style={styles.emptyContainer}>
+          <Ionicons name="fitness-outline" size={64} color={COLORS.gray} />
+          <Text style={styles.emptyText}>No se encontraron rutinas</Text>
+          <Text style={styles.emptySubtext}>
+            {searchText ? "Prueba con otros términos de búsqueda" : "Crea la primera rutina oficial"}
+          </Text>
+        </View>
+      }
+    />
+
+    {/* Modal para crear/editar rutina */}
+    <Modal
+      visible={showCreateModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => {
+            setShowCreateModal(false);
+            setEditingRoutine(null);
+            setNewRoutine({
+              name: '',
+              description: '',
+              level: 'Principiante',
+              objective: '',
+              estimatedDuration: '60',
+            });
+          }}>
+            <Ionicons name="close" size={24} color={COLORS.secondary} />
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>
+            {editingRoutine ? "Editar Rutina Oficial" : "Crear Rutina Oficial"}
+          </Text>
+          <TouchableOpacity 
+            onPress={editingRoutine ? handleUpdateRoutine : handleCreateRoutine}
+            disabled={isLoading}
+            style={[styles.saveButton, isLoading && styles.disabledButton]}
+          >
+            <Text style={styles.saveButtonText}>
+              {isLoading ? "Guardando..." : editingRoutine ? "Actualizar" : "Crear"}
+            </Text>
           </TouchableOpacity>
         </View>
         
-        {/* Filtros y búsqueda */}
-        <View style={styles.filtersContainer}>
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color={COLORS.gray} />
+        <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Nombre de la Rutina *</Text>
             <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar rutinas..."
-              value={searchText}
-              onChangeText={setSearchText}
+              style={styles.formInput}
+              value={newRoutine.name}
+              onChangeText={(text) => setNewRoutine(prev => ({ ...prev, name: text }))}
+              placeholder="Ej: Pecho y Tríceps Avanzado"
               placeholderTextColor={COLORS.gray}
             />
           </View>
           
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterTags}
-          >
-            <TouchableOpacity 
-              style={[styles.filterTag, filterLevel === 'All' && styles.activeFilterTag]}
-              onPress={() => setFilterLevel('All')}
-            >
-              <Text style={[styles.filterTagText, filterLevel === 'All' && styles.activeFilterTagText]}>
-                Todas
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.filterTag, filterLevel === 'Principiante' && styles.activeFilterTag]}
-              onPress={() => setFilterLevel('Principiante')}
-            >
-              <Text style={[styles.filterTagText, filterLevel === 'Principiante' && styles.activeFilterTagText]}>
-                Principiante
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.filterTag, filterLevel === 'Intermedio' && styles.activeFilterTag]}
-              onPress={() => setFilterLevel('Intermedio')}
-            >
-              <Text style={[styles.filterTagText, filterLevel === 'Intermedio' && styles.activeFilterTagText]}>
-                Intermedio
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.filterTag, filterLevel === 'Avanzado' && styles.activeFilterTag]}
-              onPress={() => setFilterLevel('Avanzado')}
-            >
-              <Text style={[styles.filterTagText, filterLevel === 'Avanzado' && styles.activeFilterTagText]}>
-                Avanzado
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-        
-        <Text style={styles.resultsText}>
-          {filteredRoutines.length} rutina{filteredRoutines.length !== 1 ? 's' : ''} oficial{filteredRoutines.length !== 1 ? 'es' : ''}
-        </Text>
-      </View>
-
-      {/* Lista de rutinas */}
-      <FlatList
-        data={filteredRoutines}
-        renderItem={renderRoutine}
-        keyExtractor={item => item.id}
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="fitness-outline" size={64} color={COLORS.gray} />
-            <Text style={styles.emptyText}>No se encontraron rutinas</Text>
-            <Text style={styles.emptySubtext}>
-              {searchText ? "Prueba con otros términos de búsqueda" : "Crea la primera rutina oficial"}
-            </Text>
-          </View>
-        }
-      />
-
-      {/* Modal para crear/editar rutina */}
-      <Modal
-        visible={showCreateModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => {
-              setShowCreateModal(false);
-              setEditingRoutine(null);
-              setNewRoutine({
-                name: '',
-                description: '',
-                level: 'Principiante',
-                objective: '',
-                estimatedDuration: '60',
-              });
-            }}>
-              <Ionicons name="close" size={24} color={COLORS.secondary} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>
-              {editingRoutine ? "Editar Rutina Oficial" : "Crear Rutina Oficial"}
-            </Text>
-            <TouchableOpacity 
-              onPress={editingRoutine ? handleUpdateRoutine : handleCreateRoutine}
-              disabled={isLoading}
-              style={[styles.saveButton, isLoading && styles.disabledButton]}
-            >
-              <Text style={styles.saveButtonText}>
-                {isLoading ? "Guardando..." : editingRoutine ? "Actualizar" : "Crear"}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Descripción</Text>
+            <TextInput
+              style={[styles.formInput, styles.textArea]}
+              value={newRoutine.description}
+              onChangeText={(text) => setNewRoutine(prev => ({ ...prev, description: text }))}
+              placeholder="Describe los objetivos y características de esta rutina..."
+              placeholderTextColor={COLORS.gray}
+              multiline
+              numberOfLines={4}
+            />
           </View>
           
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Nombre de la Rutina *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={newRoutine.name}
-                onChangeText={(text) => setNewRoutine(prev => ({ ...prev, name: text }))}
-                placeholder="Ej: Pecho y Tríceps Avanzado"
-                placeholderTextColor={COLORS.gray}
-              />
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Nivel de Dificultad</Text>
+            <View style={styles.levelSelector}>
+              {(['Principiante', 'Intermedio', 'Avanzado'] as const).map((level) => (
+                <TouchableOpacity 
+                  key={level}
+                  style={[
+                    styles.levelOption, 
+                    newRoutine.level === level && styles.activeLevelOption,
+                    { backgroundColor: newRoutine.level === level ? getLevelColor(level) : COLORS.grayLight }
+                  ]}
+                  onPress={() => setNewRoutine(prev => ({ ...prev, level }))}
+                >
+                  <Text style={[
+                    styles.levelOptionText, 
+                    newRoutine.level === level && styles.activeLevelOptionText
+                  ]}>
+                    {level}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Descripción</Text>
-              <TextInput
-                style={[styles.formInput, styles.textArea]}
-                value={newRoutine.description}
-                onChangeText={(text) => setNewRoutine(prev => ({ ...prev, description: text }))}
-                placeholder="Describe los objetivos y características de esta rutina..."
-                placeholderTextColor={COLORS.gray}
-                multiline
-                numberOfLines={4}
-              />
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Nivel de Dificultad</Text>
-              <View style={styles.levelSelector}>
-                {(['Principiante', 'Intermedio', 'Avanzado'] as const).map((level) => (
-                  <TouchableOpacity 
-                    key={level}
-                    style={[
-                      styles.levelOption, 
-                      newRoutine.level === level && styles.activeLevelOption,
-                      { backgroundColor: newRoutine.level === level ? getLevelColor(level) : COLORS.grayLight }
-                    ]}
-                    onPress={() => setNewRoutine(prev => ({ ...prev, level }))}
-                  >
-                    <Text style={[
-                      styles.levelOptionText, 
-                      newRoutine.level === level && styles.activeLevelOptionText
-                    ]}>
-                      {level}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Objetivo Principal</Text>
-              <TextInput
-                style={styles.formInput}
-                value={newRoutine.objective}
-                onChangeText={(text) => setNewRoutine(prev => ({ ...prev, objective: text }))}
-                placeholder="Ej: Desarrollo muscular, Fuerza, Resistencia"
-                placeholderTextColor={COLORS.gray}
-              />
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Duración Estimada (minutos)</Text>
-              <TextInput
-                style={styles.formInput}
-                value={newRoutine.estimatedDuration}
-                onChangeText={(text) => setNewRoutine(prev => ({ ...prev, estimatedDuration: text }))}
-                placeholder="60"
-                placeholderTextColor={COLORS.gray}
-                keyboardType="numeric"
-              />
-            </View>
+          </View>
+          
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Objetivo Principal</Text>
+            <TextInput
+              style={styles.formInput}
+              value={newRoutine.objective}
+              onChangeText={(text) => setNewRoutine(prev => ({ ...prev, objective: text }))}
+              placeholder="Ej: Desarrollo muscular, Fuerza, Resistencia"
+              placeholderTextColor={COLORS.gray}
+            />
+          </View>
+          
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Duración Estimada (minutos)</Text>
+            <TextInput
+              style={styles.formInput}
+              value={newRoutine.estimatedDuration}
+              onChangeText={(text) => setNewRoutine(prev => ({ ...prev, estimatedDuration: text }))}
+              placeholder="60"
+              placeholderTextColor={COLORS.gray}
+              keyboardType="numeric"
+            />
+          </View>
 
-            <View style={styles.infoBox}>
-              <Ionicons name="information-circle" size={20} color={COLORS.info} />
-              <Text style={styles.infoText}>
-                {editingRoutine 
-                  ? "Después de actualizar podrás gestionar los ejercicios de esta rutina."
-                  : "Después de crear la rutina podrás agregar y configurar los ejercicios."
-                }
-              </Text>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
-    </View>
-    </RoleGuard>
-  );
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={20} color={COLORS.info} />
+            <Text style={styles.infoText}>
+              {editingRoutine 
+                ? "Después de actualizar podrás gestionar los ejercicios de esta rutina."
+                : "Después de crear la rutina podrás agregar y configurar los ejercicios."
+              }
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  </View>
+);
 };
 
 const styles = StyleSheet.create({

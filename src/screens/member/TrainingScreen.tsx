@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   SafeAreaView,
+  TextInput,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
@@ -105,6 +106,41 @@ const TrainingScreen: React.FC = () => {
   const routine: Routine | undefined = routineId ? MOCK_ROUTINE_DETAILS[routineId] : undefined;
   const exercises: RoutineItem[] = routineId ? MOCK_ROUTINE_EXERCISES[routineId] || [] : [];
 
+  // Cronómetro
+  const [seconds, setSeconds] = useState(0);
+  const [isRunning, setIsRunning] = useState(true);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isRunning) {
+      intervalRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isRunning]);
+
+  // Estado de series completadas y datos de usuario
+  const [seriesState, setSeriesState] = useState(() => {
+    // Estructura: { [exerciseId]: [{ reps, weight, done }] }
+    const state: Record<string, { reps: string; weight: string; done: boolean }[]> = {};
+    exercises.forEach((ex) => {
+      state[ex.id] = Array.from({ length: ex.series }).map(() => ({ reps: "", weight: "", done: false }));
+    });
+    return state;
+  });
+
+  // Contador de series completadas
+  const totalSeries = Object.values(seriesState).reduce((acc, arr) => acc + arr.length, 0);
+  const completedSeries = Object.values(seriesState).reduce((acc, arr) => acc + arr.filter(s => s.done).length, 0);
+
+  // Formato de tiempo
+  const formatTime = (s: number) => {
+    const min = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${min}min ${sec < 10 ? "0" : ""}${sec}s`;
+  };
+
   if (!routine) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
@@ -118,73 +154,86 @@ const TrainingScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Header */}
-        <View style={{ width: '100%', backgroundColor: '#222', paddingTop: 30, paddingBottom: 18, alignItems: 'center', marginBottom: 10 }}>
-          <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold', textAlign: 'center', letterSpacing: 1 }}>Rutina</Text>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#222', paddingTop: 18, paddingBottom: 10, paddingHorizontal: 12, justifyContent: 'space-between' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 10 }}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', flex: 1 }}>Entrenamiento</Text>
+        <TouchableOpacity style={{ backgroundColor: '#E31C1F', borderRadius: 6, paddingHorizontal: 16, paddingVertical: 6 }} onPress={() => navigation.goBack()}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Terminar</Text>
+        </TouchableOpacity>
+      </View>
+      {/* Info rápida */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#111', paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center' }}>
+        <View>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Ejercicios</Text>
+          <Text style={{ color: '#E31C1F', fontSize: 13 }}>{formatTime(seconds)}</Text>
         </View>
-        {/* Info principal */}
-        <View style={{ backgroundColor: '#181818', borderRadius: 12, marginHorizontal: 16, marginBottom: 18, padding: 18 }}>
-          <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 2 }}>{routine.name}</Text>
-          <Text style={{ color: '#aaa', fontSize: 14, marginBottom: 8 }}>Creada por {routine.creatorType === 'GYM' ? 'Iconik Pro Gym' : 'Tú'}</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-            <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 13 }}>Nivel</Text>
-              <Text style={{ color: '#E31C1F', fontWeight: 'bold', fontSize: 15 }}>{routine.level}</Text>
+        <View>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Series</Text>
+          <Text style={{ color: '#fff', fontSize: 15 }}>{completedSeries}</Text>
+        </View>
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+        {exercises.map((ex) => (
+          <View key={ex.id} style={{ backgroundColor: '#181818', borderRadius: 12, marginHorizontal: 10, marginTop: 16, marginBottom: 8, padding: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              {/* Miniatura: icono por ahora */}
+              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#222', marginRight: 10, justifyContent: 'center', alignItems: 'center' }}>
+                <MaterialCommunityIcons name="dumbbell" size={24} color="#E31C1F" />
+              </View>
+              <TouchableOpacity onPress={() => (navigation as any).navigate('ExerciseDetail', { exerciseId: ex.id, exerciseName: ex.exerciseName })}>
+                <Text style={{ color: '#E31C1F', fontWeight: 'bold', fontSize: 16, textDecorationLine: 'underline' }}>{ex.exerciseName}</Text>
+              </TouchableOpacity>
             </View>
-            <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 13 }}>Objetivo</Text>
-              <Text style={{ color: '#E31C1F', fontWeight: 'bold', fontSize: 15 }}>{routine.objective}</Text>
+            {/* Tabla de series */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 50, textAlign: 'center' }}>SERIE</Text>
+              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>ANTERIOR</Text>
+              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>Kg/LBS</Text>
+              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>REPS</Text>
+              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 30, textAlign: 'center' }}></Text>
             </View>
-            <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={{ color: '#888', fontSize: 13 }}>Duración</Text>
-              <Text style={{ color: '#E31C1F', fontWeight: 'bold', fontSize: 15 }}>{routine.estimatedTime} min</Text>
-            </View>
+            {seriesState[ex.id].map((serie, idx) => (
+              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                <Text style={{ color: '#E31C1F', fontWeight: 'bold', width: 50, textAlign: 'center' }}>F</Text>
+                <Text style={{ color: '#fff', width: 60, textAlign: 'center' }}>{ex.previousReps || '-'}</Text>
+                <TextInput
+                  style={{ backgroundColor: '#222', color: '#fff', borderRadius: 6, width: 56, height: 28, textAlign: 'center', marginHorizontal: 2, fontSize: 15, borderWidth: 1, borderColor: '#333' }}
+                  placeholder="-"
+                  placeholderTextColor="#888"
+                  value={serie.weight}
+                  keyboardType="numeric"
+                  onChangeText={(val) => setSeriesState((prev) => {
+                    const arr = [...prev[ex.id]];
+                    arr[idx] = { ...arr[idx], weight: val };
+                    return { ...prev, [ex.id]: arr };
+                  })}
+                />
+                <TextInput
+                  style={{ backgroundColor: '#222', color: '#fff', borderRadius: 6, width: 56, height: 28, textAlign: 'center', marginHorizontal: 2, fontSize: 15, borderWidth: 1, borderColor: '#333' }}
+                  placeholder="-"
+                  placeholderTextColor="#888"
+                  value={serie.reps}
+                  keyboardType="numeric"
+                  onChangeText={(val) => setSeriesState((prev) => {
+                    const arr = [...prev[ex.id]];
+                    arr[idx] = { ...arr[idx], reps: val };
+                    return { ...prev, [ex.id]: arr };
+                  })}
+                />
+                <TouchableOpacity onPress={() => setSeriesState((prev) => {
+                  const arr = [...prev[ex.id]];
+                  arr[idx] = { ...arr[idx], done: !arr[idx].done };
+                  return { ...prev, [ex.id]: arr };
+                })}>
+                  <MaterialCommunityIcons name={serie.done ? "checkbox-marked" : "checkbox-blank-outline"} size={24} color={serie.done ? '#28A745' : '#fff'} />
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
-          <Text style={{ color: '#aaa', fontSize: 15 }}>{routine.description}</Text>
-        </View>
-        {/* Ejercicios */}
-        <View style={{ marginHorizontal: 16 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Ejercicios</Text>
-            <Text style={{ color: '#aaa', fontSize: 15 }}>{exercises.length} ejercicio{exercises.length !== 1 ? 's' : ''}</Text>
-          </View>
-          {exercises.map((ex: RoutineItem) => (
-            <View key={ex.id} style={{ backgroundColor: '#181818', borderRadius: 14, marginBottom: 18, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#222', marginRight: 10, justifyContent: 'center', alignItems: 'center' }}>
-                    {/* Aquí podrías poner un icono o imagen */}
-                  </View>
-                  <Text style={{ color: '#222', fontWeight: 'bold', fontSize: 15 }}></Text>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{ex.exerciseName}</Text>
-                </View>
-                <View style={{ backgroundColor: '#E31C1F', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 2 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{ex.muscleGroup}</Text>
-                </View>
-              </View>
-              {/* Tabla de series */}
-              <View style={{ marginTop: 4, marginBottom: 2 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>SERIE</Text>
-                  <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>Kg/LBS</Text>
-                  <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>REPS</Text>
-                  <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>ANTERIOR</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
-                  <Text style={{ color: '#E31C1F', fontWeight: 'bold', width: 60, textAlign: 'center' }}>{ex.series}</Text>
-                  <Text style={{ color: '#fff', width: 60, textAlign: 'center' }}>-</Text>
-                  <Text style={{ color: '#E31C1F', width: 60, textAlign: 'center', fontWeight: 'bold' }}>{ex.reps}F</Text>
-                  <Text style={{ color: '#E31C1F', width: 60, textAlign: 'center', fontWeight: 'bold' }}>{ex.previousReps}F</Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                <Text style={{ color: '#aaa', fontSize: 14 }}>📦 {ex.equipment}</Text>
-                <Text style={{ color: '#aaa', fontSize: 14 }}>⏱️ {ex.restTime}s descanso</Text>
-              </View>
-            </View>
-          ))}
-        </View>
+        ))}
         <View style={{ height: 80 }} />
       </ScrollView>
     </SafeAreaView>
