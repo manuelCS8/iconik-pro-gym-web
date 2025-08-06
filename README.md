@@ -67,8 +67,12 @@ npm install
    - Configurar las reglas de Firestore (ver `firestore.rules`)
 
 4. **Configurar variables de entorno**
-   - Crear archivo `.env` en la raíz
-   - Agregar las claves de Firebase y OpenAI
+   - Copiar `env.example` a `.env`
+   - Configurar las claves de Firebase y OpenAI:
+   ```bash
+   cp env.example .env
+   # Editar .env con tus claves reales
+   ```
 
 5. **Ejecutar la aplicación**
 ```bash

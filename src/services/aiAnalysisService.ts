@@ -4,11 +4,11 @@ import { Alert } from 'react-native';
 const HUGGING_FACE_API_URL = 'https://api-inference.huggingface.co/models/nateraw/food101';
 // URL alternativa para testing
 const HUGGING_FACE_API_URL_ALT = 'https://api-inference.huggingface.co/models/google/vit-base-patch16-224';
-const HUGGING_FACE_TOKEN = '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'; // Token con permisos de inferencia
+const HUGGING_FACE_TOKEN = process.env.EXPO_PUBLIC_HUGGING_FACE_TOKEN || '';
 
 // Configuración de OpenAI
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_API_KEY = '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';
+const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
 
 interface MealAnalysis {
   calories: number;
