@@ -1,12 +1,16 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import adminReducer from './slices/adminSlice';
+import nutritionReducer from './slices/nutritionSlice';
+import userRoutinesReducer from './slices/userRoutinesSlice';
 // (Luego agregaremos memberReducer, adminReducer, etc.)
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     admin: adminReducer,
+    nutrition: nutritionReducer,
+    userRoutines: userRoutinesReducer,
     // member: memberReducer,
     // admin: adminReducer,
   },

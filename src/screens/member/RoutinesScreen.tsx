@@ -7,22 +7,44 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
+  Alert,
 } from "react-native";
 import { SelectList } from "react-native-dropdown-select-list";
 import { COLORS, SIZES } from "../../utils/theme";
 import { useNavigation } from "@react-navigation/native";
+import { collection, getDocs, query, where, getDoc, doc } from "firebase/firestore";
+import { db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 
 const windowWidth = Dimensions.get("window").width;
+
+interface RoutineExercise {
+  exerciseId: string;
+  exerciseName: string;
+  primaryMuscleGroups: string[];
+  equipment: string;
+  difficulty: string;
+  series: number;
+  reps: number;
+  restTime: number;
+  order: number;
+  notes?: string;
+}
 
 interface Routine {
   id: string;
   name: string;
-  creatorType: string;
-  level: string;
-  objective: string;
-  muscles: string[];
-  equipment: string[];
   description: string;
+  level: 'Principiante' | 'Intermedio' | 'Avanzado';
+  objective: string;
+  estimatedDuration: number;
+  exercises: RoutineExercise[];
+  creatorType: 'GYM';
+  createdAt: any;
+  updatedAt?: any;
+  createdBy?: string;
+  isActive: boolean;
+  isPublic?: boolean;
 }
 
 const muscleGroups = [
@@ -56,67 +78,21 @@ const equipmentTypes = [
   { key: "PesaRusa", value: "Pesa Rusa" },
 ];
 
-// Mock data para rutinas oficiales
-const MOCK_ROUTINES: Routine[] = [
-  {
-    id: "routine1",
-    name: "Rutina 1 Básica Caballero",
-    creatorType: "GYM",
-    level: "Principiante",
-    objective: "Fuerza",
-    muscles: ["Pecho", "Triceps", "Hombro"],
-    equipment: ["Maquina", "Mancuernas"],
-    description: "Rutina ideal para principiantes enfocada en el tren superior",
-  },
-  {
-    id: "routine2",
-    name: "Rutina Pecho Intensivo",
-    creatorType: "GYM",
-    level: "Intermedio",
-    objective: "Hipertrofia",
-    muscles: ["Pecho", "Triceps"],
-    equipment: ["Barra", "Mancuernas", "Banco"],
-    description: "Entrenamiento intensivo para desarrollo del pecho",
-  },
-  {
-    id: "routine3",
-    name: "Rutina Piernas Completa",
-    creatorType: "GYM",
-    level: "Avanzado",
-    objective: "Fuerza",
-    muscles: ["Cuadriceps", "Femorales", "Gluteo"],
-    equipment: ["Maquina", "Barra", "Smith"],
-    description: "Entrenamiento completo para el tren inferior",
-  },
-  {
-    id: "routine4",
-    name: "Rutina Funcional Sin Equipos",
-    creatorType: "GYM",
-    level: "Principiante",
-    objective: "Acondicionamiento",
-    muscles: ["Abdominales", "Gluteo", "Cuadriceps"],
-    equipment: ["SinEquipo"],
-    description: "Ejercicios funcionales que puedes hacer en casa",
-  },
-  {
-    id: "routine5",
-    name: "Rutina Espalda y Bíceps",
-    creatorType: "GYM",
-    level: "Intermedio",
-    objective: "Hipertrofia",
-    muscles: ["Dorsales", "Biceps", "Trapecios"],
-    equipment: ["Poleas", "Mancuernas", "Barra"],
-    description: "Enfoque en el desarrollo del tren superior posterior",
-  },
-];
+
 
 const RoutinesScreen: React.FC = () => {
   const navigation = useNavigation();
   const [searchText, setSearchText] = useState<string>("");
   const [selectedMuscle, setSelectedMuscle] = useState<string>("");
   const [selectedEquipment, setSelectedEquipment] = useState<string>("");
-  const [routines, setRoutines] = useState<Routine[]>(MOCK_ROUTINES);
-  const [filteredRoutines, setFilteredRoutines] = useState<Routine[]>(MOCK_ROUTINES);
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [filteredRoutines, setFilteredRoutines] = useState<Routine[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadRoutines();
+  }, []);
 
   useEffect(() => {
     const filterRoutines = () => {
@@ -133,14 +109,18 @@ const RoutinesScreen: React.FC = () => {
       // Filtrar por grupo muscular
       if (selectedMuscle) {
         filtered = filtered.filter(routine =>
-          routine.muscles.includes(selectedMuscle)
+          routine.exercises.some(exercise => 
+            exercise.primaryMuscleGroups.includes(selectedMuscle)
+          )
         );
       }
 
       // Filtrar por equipo
       if (selectedEquipment) {
         filtered = filtered.filter(routine =>
-          routine.equipment.includes(selectedEquipment)
+          routine.exercises.some(exercise => 
+            exercise.equipment === selectedEquipment
+          )
         );
       }
 
@@ -149,6 +129,108 @@ const RoutinesScreen: React.FC = () => {
 
     filterRoutines();
   }, [searchText, selectedMuscle, selectedEquipment, routines]);
+
+  const loadRoutines = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log('🔄 Iniciando carga de rutinas...');
+      
+      // Verificar autenticación
+      const user = auth.currentUser;
+      if (!user) {
+        console.log('❌ Usuario no autenticado');
+        setError('Usuario no autenticado');
+        return;
+      }
+      
+      console.log('👤 Usuario autenticado:', user.email);
+      console.log('🆔 UID del usuario:', user.uid);
+      
+      // Verificar rol del usuario
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log('📋 Datos del usuario:', {
+            role: userData.role,
+            isActive: userData.isActive,
+            membershipStatus: userData.membershipStatus
+          });
+        } else {
+          console.log('⚠️ Documento de usuario no encontrado');
+        }
+      } catch (userError) {
+        console.log('⚠️ Error obteniendo datos del usuario:', userError);
+      }
+      
+      // Intentar cargar todas las rutinas primero
+      console.log('📊 Intentando cargar TODAS las rutinas...');
+      const routinesRef = collection(db, 'routines');
+      const allSnapshot = await getDocs(routinesRef);
+      
+      console.log(`📊 Encontradas ${allSnapshot.docs.length} rutinas totales en Firestore`);
+      
+      // Mostrar detalles de cada rutina
+      allSnapshot.docs.forEach((docSnap, index) => {
+        const data = docSnap.data();
+        console.log(`📋 Rutina ${index + 1}:`, {
+          id: docSnap.id,
+          name: data.name || 'Sin nombre',
+          isActive: data.isActive,
+          isPublic: data.isPublic,
+          creatorType: data.creatorType,
+          createdBy: data.createdBy,
+        });
+      });
+      
+      // Filtrar en el cliente: solo rutinas activas (sin importar isPublic)
+      const routinesFromFirestore: Routine[] = allSnapshot.docs
+        .map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            name: data.name || '',
+            description: data.description || '',
+            level: data.level || 'Principiante',
+            objective: data.objective || '',
+            estimatedDuration: data.estimatedDuration || 60,
+            exercises: data.exercises || [],
+            creatorType: data.creatorType || 'GYM',
+            createdAt: data.createdAt || new Date(),
+            updatedAt: data.updatedAt,
+            createdBy: data.createdBy || 'admin',
+            isActive: data.isActive !== false,
+            isPublic: data.isPublic || false,
+          };
+        })
+        .filter(routine => routine.isActive); // Solo rutinas activas
+        
+      console.log(`🔍 Filtrado en cliente: ${routinesFromFirestore.length} rutinas activas`);
+      
+      setRoutines(routinesFromFirestore);
+      console.log(`✅ Cargadas ${routinesFromFirestore.length} rutinas activas desde Firestore`);
+
+    } catch (error: any) {
+      console.error('❌ Error loading routines:', error);
+      
+      // Log detallado del error
+      if (error.code === 'permission-denied') {
+        console.log('🚨 Error de permisos específico');
+        console.log('🔍 Verificando reglas de Firebase...');
+        console.log('📋 El usuario debe tener permisos para leer rutinas activas');
+      }
+      
+      setError(`Error loading routines: ${error.message}`);
+      
+      if (routines.length === 0) {
+        console.log('⚠️ No hay rutinas públicas disponibles o problemas de permisos');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Función para obtener color del badge según nivel
   const getLevelBadgeColor = (level: string) => {
@@ -178,9 +260,12 @@ const RoutinesScreen: React.FC = () => {
     }
   };
 
-  const onStartRoutine = (routineId: string) => {
-    console.log(`Navigando a detalle de rutina: ${routineId}`);
-    navigation.navigate("RoutineDetail" as never, { routineId } as never);
+  const onStartRoutine = (routine: Routine) => {
+    // Navegar a la pantalla de detalle de rutina
+    navigation.navigate('RoutineDetail', { 
+      routineId: routine.id,
+      isUserRoutine: false 
+    });
   };
 
   const renderRoutineCard = ({ item }: { item: Routine }) => (
@@ -199,14 +284,20 @@ const RoutinesScreen: React.FC = () => {
           Objetivo: {item.objective}
         </Text>
         <Text style={styles.cardSubtitle}>
-          Músculos: {item.muscles.slice(0, 2).join(", ")}
-          {item.muscles.length > 2 && " +más"}
+          Duración: {item.estimatedDuration} min
+        </Text>
+        <Text style={styles.cardSubtitle}>
+          Ejercicios: {item.exercises.length} ejercicio{item.exercises.length !== 1 ? 's' : ''}
+        </Text>
+        <Text style={styles.cardSubtitle}>
+          Músculos: {item.exercises.slice(0, 2).map(ex => ex.primaryMuscleGroups[0]).join(", ")}
+          {item.exercises.length > 2 && " +más"}
         </Text>
       </View>
 
       <TouchableOpacity
         style={[styles.cardButton, { backgroundColor: COLORS.danger }]}
-        onPress={() => onStartRoutine(item.id)}
+        onPress={() => onStartRoutine(item)}
       >
         <Text style={styles.cardButtonText}>🚀 Comenzar Rutina</Text>
       </TouchableOpacity>
@@ -263,6 +354,13 @@ const RoutinesScreen: React.FC = () => {
       <Text style={styles.resultsCounter}>
         {filteredRoutines.length} rutina{filteredRoutines.length !== 1 ? 's' : ''} encontrada{filteredRoutines.length !== 1 ? 's' : ''}
       </Text>
+
+      {/* Botón de Refresh */}
+      <TouchableOpacity style={styles.refreshButton} onPress={loadRoutines}>
+        <Text style={styles.refreshButtonText}>
+          🔄 Actualizar Rutinas
+        </Text>
+      </TouchableOpacity>
 
       {/* Lista de Rutinas Oficiales */}
       <FlatList
@@ -329,6 +427,25 @@ const styles = StyleSheet.create({
     fontSize: SIZES.fontSmall,
     color: '#aaa', // Gris claro
     marginBottom: SIZES.padding,
+    textAlign: "center",
+  },
+  refreshButton: {
+    alignSelf: "center",
+    backgroundColor: COLORS.primary, // Rojo
+    paddingHorizontal: SIZES.padding * 2,
+    paddingVertical: SIZES.padding,
+    borderRadius: SIZES.radius,
+    marginBottom: SIZES.padding,
+    shadowColor: '#E31C1F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontSize: SIZES.fontRegular,
+    fontWeight: "bold",
     textAlign: "center",
   },
   card: {

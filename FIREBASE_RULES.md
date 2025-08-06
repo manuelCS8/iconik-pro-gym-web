@@ -1,8 +1,8 @@
-# 🔥 Reglas de Firebase para Iconik Pro Gym
+# Reglas de Seguridad de Firebase
 
-## 📋 Reglas de Firestore Database
+## Firestore Rules
 
-Ve a **Firestore Database** > **Reglas** y reemplaza con:
+Configura estas reglas en tu consola de Firebase > Firestore Database > Rules:
 
 ```javascript
 rules_version = '2';
@@ -10,116 +10,187 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Reglas para usuarios
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN";
+      allow read: if request.auth != null && (request.auth.uid == userId || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && 
+        (request.auth.uid == userId || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
     
     // Reglas para ejercicios
     match /exercises/{exerciseId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN";
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Reglas para rutinas
+    // Reglas para rutinas - ACTUALIZADAS
     match /routines/{routineId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Reglas para progreso de usuarios
-    match /progress/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Permitir lectura a usuarios autenticados para rutinas activas
       allow read: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN";
+        (resource.data.isActive == true || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      
+      // Permitir escritura solo a administradores
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
 ```
 
-## 📁 Reglas de Storage
+## Reglas Alternativas (Si las anteriores no funcionan)
 
-Ve a **Storage** > **Reglas** y reemplaza con:
+Si el problema persiste, usa estas reglas más permisivas temporalmente:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para usuarios
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
+      allow write: if request.auth != null && 
+        (request.auth.uid == userId || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
+      allow create: if request.auth != null && 
+        (request.auth.uid == userId || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
+    }
+    
+    // Reglas para ejercicios
+    match /exercises/{exerciseId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+    
+    // Reglas para rutinas - ALTERNATIVAS (más permisivas)
+    match /routines/{routineId} {
+      // Permitir lectura a TODOS los usuarios autenticados (temporal)
+      allow read: if request.auth != null;
+      
+      // Permitir escritura solo a administradores
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+  }
+}
+```
+
+## Storage Rules
+
+Configura estas reglas en tu consola de Firebase > Storage > Rules:
 
 ```javascript
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Videos de ejercicios (solo admins pueden subir)
-    match /videos/{allPaths=**} {
+    // Permitir lectura de todos los archivos a usuarios autenticados
+    match /{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "ADMIN";
     }
     
-    // Imágenes de ejercicios (solo admins pueden subir)
-    match /exercises/thumbnails/{allPaths=**} {
-      allow read: if request.auth != null;
+    // Permitir escritura solo a administradores para ejercicios
+    match /exercises/{allPaths=**} {
       allow write: if request.auth != null && 
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "ADMIN";
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
     }
     
-    // Avatares de usuarios
-    match /users/{userId}/avatar {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Permitir escritura solo a administradores para rutinas
+    match /routines/{allPaths=**} {
+      allow write: if request.auth != null && 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
     }
   }
 }
 ```
 
-## 🛠️ Pasos para Configurar
+## Configuración de Autenticación
 
-### 1. Configurar Authentication
-1. Ve a **Authentication** > **Sign-in method**
-2. Habilita **Correo electrónico/contraseña**
-3. Habilita **Google** (opcional para futuras funcionalidades)
+En Firebase Console > Authentication > Sign-in method:
 
-### 2. Crear Usuario Admin
-1. Ve a **Authentication** > **Users**
-2. Clica "Agregar usuario"
-3. Email: `admin@iconik.com`
-4. Contraseña: `admin123`
-5. Clica "Agregar usuario"
+1. **Habilitar Email/Password**
+2. **Habilitar Google Sign-in**
+3. **Configurar dominios autorizados** para Google Sign-in
 
-### 3. Crear Perfil Admin en Firestore
-1. Ve a **Firestore Database**
-2. Crea colección: `users`
-3. Crea documento con ID: `[UID del usuario admin]`
-4. Agrega estos datos:
+## Configuración de Google Sign-in
 
-```json
-{
-  "uid": "[UID del usuario admin]",
-  "email": "admin@iconik.com",
-  "name": "Administrador",
-  "role": "ADMIN",
-  "createdAt": "2024-01-01T00:00:00.000Z",
-  "membershipStart": "2024-01-01T00:00:00.000Z",
-  "membershipEnd": "2025-12-31T23:59:59.999Z",
-  "age": 30,
-  "weight": 80,
-  "height": 180
-}
+Para Android, asegúrate de que tu `google-services.json` esté configurado correctamente.
+
+Para iOS, verifica que tu `GoogleService-Info.plist` esté en el proyecto.
+
+## Variables de Entorno
+
+Asegúrate de que las siguientes variables estén configuradas en tu proyecto:
+
+```env
+REACT_APP_FIREBASE_API_KEY=tu_api_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=tu_proyecto.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=tu_proyecto
+REACT_APP_FIREBASE_STORAGE_BUCKET=tu_proyecto.firebasestorage.app
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=tu_sender_id
+REACT_APP_FIREBASE_APP_ID=tu_app_id
+REACT_APP_FIREBASE_MEASUREMENT_ID=tu_measurement_id
 ```
 
-### 4. Verificar Configuración
-1. **Prueba registro:** Crea una nueva cuenta en la app
-2. **Prueba login:** Inicia sesión con credenciales reales
-3. **Prueba admin:** Usa `admin@iconik.com` / `admin123`
-4. **Prueba subida:** Como admin, sube un ejercicio con video
+## Índices de Firestore
 
-## ✅ Estado Actual
+Crea los siguientes índices compuestos en Firestore:
 
-- 🔥 **Firebase REAL activado** (no más modo mock)
-- 🔥 **SDK completo** configurado
-- 🔥 **Servicios actualizados** para Firebase real
-- 🔥 **Reglas de seguridad** listas para configurar
-- 🔥 **Nuevo proyecto**: app-iconik-pro
+1. **Collection: exercises**
+   - Fields: isActive (Ascending), createdAt (Descending)
 
-## 🚨 Importante
+2. **Collection: exercises**
+   - Fields: category (Ascending), isActive (Ascending), createdAt (Descending)
 
-- ❌ **Credenciales mock ya NO funcionan**
-- ✅ **Solo usuarios reales** de Firebase pueden acceder
-- ✅ **Admin debe ser creado** manualmente en Firebase Console
-- ✅ **Reglas de seguridad** deben configurarse para funcionar correctamente
-- ✅ **Nuevo proyecto**: app-iconik-pro (no conikprogym) 
+3. **Collection: exercises**
+   - Fields: muscleGroups (Array), isActive (Ascending), createdAt (Descending)
+
+4. **Collection: routines**
+   - Fields: isActive (Ascending), createdAt (Descending)
+
+5. **Collection: routines**
+   - Fields: category (Ascending), isActive (Ascending), createdAt (Descending)
+
+6. **Collection: routines**
+   - Fields: difficulty (Ascending), isActive (Ascending), createdAt (Descending)
+
+7. **Collection: users**
+   - Fields: role (Ascending), isActive (Ascending)
+
+## Notas Importantes
+
+1. **Límite de Administradores**: El sistema limita a máximo 5 administradores.
+2. **Membresías**: Los usuarios deben tener membresía activa para acceder.
+3. **Contenido Público**: Solo las rutinas activas son visibles para miembros.
+4. **Seguridad**: Solo los administradores pueden crear, editar y eliminar contenido.
+5. **Backup**: Considera configurar backups automáticos de Firestore.
+
+## Solución de Problemas
+
+### Si las rutinas no aparecen para miembros:
+
+1. **Verificar reglas**: Asegúrate de que las reglas usen `isActive == true`
+2. **Forzar actualización**: Agrega un espacio en las reglas y publica
+3. **Usar reglas alternativas**: Si persiste, usa las reglas más permisivas
+4. **Verificar usuario**: Confirma que el usuario tenga rol 'MEMBER' y esté activo
+5. **Verificar rutina**: Confirma que la rutina tenga `isActive: true`
+
+### Pasos para forzar actualización de reglas:
+
+1. Ve a Firebase Console > Firestore Database > Rules
+2. Agrega un espacio o comentario en cualquier línea
+3. Publica las reglas
+4. Espera 2-3 minutos para que se propaguen
+5. Prueba de nuevo
+
+## Próximos Pasos
+
+1. Configura las reglas de seguridad en Firebase Console
+2. Crea los índices compuestos necesarios
+3. Verifica que la autenticación esté habilitada
+4. Prueba la funcionalidad con usuarios de prueba
+5. Configura notificaciones push si es necesario 

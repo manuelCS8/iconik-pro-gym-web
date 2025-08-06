@@ -9,20 +9,44 @@ import {
   ScrollView,
   SafeAreaView,
 } from "react-native";
-import { useDispatch } from "react-redux";
-import { setUser } from "../../redux/slices/authSlice";
+import { useAuth } from "../../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
-import { COLORS, SIZES } from "../../utils/theme";
 import { Ionicons } from '@expo/vector-icons';
 import ArtisticBackground from "../../components/ArtisticBackground";
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const SignUpScreen: React.FC = () => {
-  const dispatch = useDispatch();
+  const { signInWithGoogle, signUpWithEmail } = useAuth();
   const navigation = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
 
-  const onGoogleSignUp = () => {
-    Alert.alert("Google Sign-Up", "Funcionalidad en desarrollo. Usa el formulario de email para registrarte.");
+  const onGoogleSignUp = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Verificar que Google Play Services esté disponible
+      await GoogleSignin.hasPlayServices();
+      
+      // Iniciar el proceso de sign-in
+      const { idToken } = await GoogleSignin.signIn();
+      
+      // Iniciar sesión con Firebase
+      await signInWithGoogle(idToken);
+      
+      Alert.alert("Éxito", "Registro con Google completado exitosamente");
+    } catch (error: any) {
+      console.error('Error en Google Sign-Up:', error);
+      
+      if (error.message?.includes('cancelado')) {
+        Alert.alert("Cancelado", "Registro cancelado por el usuario");
+      } else if (error.message?.includes('no autorizado')) {
+        Alert.alert("Error", "Usuario no autorizado. Contacta al administrador.");
+      } else {
+        Alert.alert("Error", "Error al registrar con Google. Intenta de nuevo.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const onEmailSignUp = () => {
@@ -49,7 +73,7 @@ const SignUpScreen: React.FC = () => {
         <View style={styles.formContainer}>
           {/* Google Sign Up Button */}
           <TouchableOpacity 
-            style={styles.googleButton}
+            style={[styles.googleButton, isLoading && styles.disabledButton]}
             onPress={onGoogleSignUp}
             disabled={isLoading}
           >
@@ -57,17 +81,21 @@ const SignUpScreen: React.FC = () => {
               source={{uri: 'https://developers.google.com/identity/images/g-logo.png'}} 
               style={styles.googleIcon}
             />
-            <Text style={styles.googleButtonText}>Registrate con Google</Text>
+            <Text style={styles.googleButtonText}>
+              {isLoading ? 'Registrando...' : 'Registrate con Google'}
+            </Text>
           </TouchableOpacity>
 
           {/* Email Sign Up Button */}
           <TouchableOpacity 
-            style={styles.emailButton}
+            style={[styles.emailButton, isLoading && styles.disabledButton]}
             onPress={onEmailSignUp}
             disabled={isLoading}
           >
             <Ionicons name="mail-outline" size={24} color="#fff" style={styles.emailIcon} />
-            <Text style={styles.emailButtonText}>Registrate con Correo</Text>
+            <Text style={styles.emailButtonText}>
+              {isLoading ? 'Cargando...' : 'Registrate con Correo'}
+            </Text>
           </TouchableOpacity>
 
           {/* Bottom Link */}
@@ -158,6 +186,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   bottomContainer: {
     flexDirection: 'row',

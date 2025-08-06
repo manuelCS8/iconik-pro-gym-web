@@ -8,6 +8,8 @@ import syncService from "../../services/syncService";
 import ConnectionStatus from "../../components/ConnectionStatus";
 import ArtisticBackground from "../../components/ArtisticBackground";
 import SparklineTraining from "../../components/SparklineTraining";
+import { useTabBarVisibility } from "../../hooks/useTabBarVisibility";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const windowWidth = Dimensions.get("window").width;
 
@@ -22,6 +24,7 @@ interface TrainingStats {
 const HomeScreen: React.FC = () => {
   const { colors } = useTheme();
   const { uid, name: userNameFromRedux } = useSelector((state: RootState) => state.auth);
+  const insets = useSafeAreaInsets();
   const [userName, setUserName] = useState<string>("");
   const [membershipEnd, setMembershipEnd] = useState<string>("");
   const [stats, setStats] = useState<TrainingStats>({
@@ -33,6 +36,9 @@ const HomeScreen: React.FC = () => {
   });
   const [motivationalText, setMotivationalText] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+
+  // Hook para manejar la visibilidad de la barra de navegación
+  const { handleScroll } = useTabBarVisibility();
 
   // Array de frases motivacionales
   const motivationalQuotes = [
@@ -224,20 +230,25 @@ const HomeScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ArtisticBackground />
       
       {/* Margen superior negro con texto */}
-      <View style={styles.topMargin}>
+      <View style={[styles.topMargin, { paddingTop: insets.top }]}>
         <Text style={styles.welcomeHeader}>Bienvenido</Text>
       </View>
       
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer} 
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* Logo centrado en la mancha gris */}
         <View style={styles.logoSection}>
           <Image 
             source={require("../../assets/logo.png")} 
-            style={styles.logo} 
+            style={{ width: 180, height: 180, alignSelf: 'center', marginBottom: 0 }} 
             resizeMode="contain" 
           />
         </View>
@@ -299,9 +310,6 @@ const HomeScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Gráfico de actividad semanal */}
-          <SparklineTraining userId={uid!} />
-
           {/* Texto motivacional */}
           {motivationalText ? (
             <View style={styles.quoteBox}>
@@ -322,39 +330,37 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
   },
   topMargin: {
-    height: 100,
     backgroundColor: '#000',
-    justifyContent: 'flex-end',
+    paddingBottom: 12, // Reducido
     alignItems: 'center',
-    paddingBottom: 20,
+    marginBottom: 8, // Reducido
   },
   welcomeHeader: {
-    fontSize: 32,
+    color: '#fff',
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#ffffff',
-    textAlign: 'center',
+    letterSpacing: 1,
   },
   bottomMargin: {
     height: 30,
     backgroundColor: '#000',
   },
   scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: SIZES.padding,
+    alignItems: 'center',
+    paddingBottom: 16,
   },
   logoSection: {
+    marginTop: 0, // Eliminado margen extra
+    marginBottom: 8, // Reducido
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 60,
-    paddingBottom: 40,
   },
   logo: {
-    width: 250,
-    height: 250,
-    marginLeft: -30,
+    width: 90,
+    height: 90,
+    marginBottom: 0,
   },
   hiddenConnection: {
     position: 'absolute',
@@ -362,21 +368,22 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   contentContainer: {
-    alignItems: "center",
-    paddingBottom: 20,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 0, // Eliminado margen extra
   },
   welcomeCard: {
+    borderRadius: 10,
+    padding: 12, // Reducido
+    marginBottom: 10, // Reducido
+    width: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: SIZES.margin,
-    width: "100%",
-    alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    alignItems: 'center',
   },
   welcomeText: {
     fontSize: 24,

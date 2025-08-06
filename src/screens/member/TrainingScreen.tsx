@@ -73,7 +73,28 @@ const MOCK_ROUTINE_EXERCISES: Record<string, RoutineItem[]> = {
       muscleGroup: "Pecho",
       equipment: "Máquina",
     },
-    // ... agrega los demás ejercicios ...
+    {
+      id: "2",
+      exerciseName: "Press Inclinado con Mancuernas",
+      series: 4,
+      reps: 10,
+      restTime: 90,
+      previousReps: 10,
+      position: 2,
+      muscleGroup: "Pecho",
+      equipment: "Mancuernas",
+    },
+    {
+      id: "3",
+      exerciseName: "Aperturas con Polea",
+      series: 3,
+      reps: 15,
+      restTime: 60,
+      previousReps: 15,
+      position: 3,
+      muscleGroup: "Pecho",
+      equipment: "Polea",
+    },
   ],
   user_routine1: [
     {
@@ -87,9 +108,29 @@ const MOCK_ROUTINE_EXERCISES: Record<string, RoutineItem[]> = {
       muscleGroup: "Pecho",
       equipment: "Máquina",
     },
-    // ... agrega los demás ejercicios ...
+    {
+      id: "2",
+      exerciseName: "Press Declinado",
+      series: 3,
+      reps: 12,
+      restTime: 90,
+      previousReps: 12,
+      position: 2,
+      muscleGroup: "Pecho",
+      equipment: "Barra",
+    },
+    {
+      id: "3",
+      exerciseName: "Fondos en Paralelas",
+      series: 3,
+      reps: 8,
+      restTime: 120,
+      previousReps: 8,
+      position: 3,
+      muscleGroup: "Pecho",
+      equipment: "Peso Corporal",
+    },
   ],
-  // ... agrega los demás mocks necesarios ...
 };
 
 type TrainingRouteParams = {
@@ -154,18 +195,19 @@ const TrainingScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#222', paddingTop: 18, paddingBottom: 10, paddingHorizontal: 12, justifyContent: 'space-between' }}>
+      {/* Header negro con flecha y botón Terminar */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#000', paddingTop: 18, paddingBottom: 10, paddingHorizontal: 12, justifyContent: 'space-between' }}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 10 }}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', flex: 1 }}>Entrenamiento</Text>
-        <TouchableOpacity style={{ backgroundColor: '#E31C1F', borderRadius: 6, paddingHorizontal: 16, paddingVertical: 6 }} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={{ backgroundColor: '#E31C1F', borderRadius: 6, paddingHorizontal: 16, paddingVertical: 8 }} onPress={() => navigation.goBack()}>
           <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Terminar</Text>
         </TouchableOpacity>
       </View>
-      {/* Info rápida */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#111', paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center' }}>
+
+      {/* Resumen con Ejercicios y Series */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#000', paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center' }}>
         <View>
           <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Ejercicios</Text>
           <Text style={{ color: '#E31C1F', fontSize: 13 }}>{formatTime(seconds)}</Text>
@@ -175,32 +217,35 @@ const TrainingScreen: React.FC = () => {
           <Text style={{ color: '#fff', fontSize: 15 }}>{completedSeries}</Text>
         </View>
       </View>
+
+      {/* Separador */}
+      <View style={{ height: 1, backgroundColor: '#333', marginHorizontal: 14 }} />
+
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
         {exercises.map((ex) => (
-          <View key={ex.id} style={{ backgroundColor: '#181818', borderRadius: 12, marginHorizontal: 10, marginTop: 16, marginBottom: 8, padding: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              {/* Miniatura: icono por ahora */}
-              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#222', marginRight: 10, justifyContent: 'center', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="dumbbell" size={24} color="#E31C1F" />
-              </View>
-              <TouchableOpacity onPress={() => (navigation as any).navigate('ExerciseDetail', { exerciseId: ex.id, exerciseName: ex.exerciseName })}>
-                <Text style={{ color: '#E31C1F', fontWeight: 'bold', fontSize: 16, textDecorationLine: 'underline' }}>{ex.exerciseName}</Text>
-              </TouchableOpacity>
+          <View key={ex.id} style={{ backgroundColor: '#181818', borderRadius: 12, marginHorizontal: 10, marginTop: 16, marginBottom: 8, padding: 16 }}>
+            {/* Título del ejercicio con icono */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <MaterialCommunityIcons name="dumbbell" size={24} color="#E31C1F" />
+              <Text style={{ color: '#E31C1F', fontWeight: 'bold', fontSize: 16, marginLeft: 8 }}>{ex.exerciseName}</Text>
             </View>
+
             {/* Tabla de series */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 50, textAlign: 'center' }}>SERIE</Text>
-              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>ANTERIOR</Text>
-              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>Kg/LBS</Text>
-              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>REPS</Text>
-              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold', width: 30, textAlign: 'center' }}></Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', width: 50, textAlign: 'center' }}>SERIE</Text>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>ANTERIOR</Text>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>Kg/LBS</Text>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', width: 60, textAlign: 'center' }}>REPS</Text>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', width: 30, textAlign: 'center' }}></Text>
             </View>
+
+            {/* Filas de series */}
             {seriesState[ex.id].map((serie, idx) => (
-              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={{ color: '#E31C1F', fontWeight: 'bold', width: 50, textAlign: 'center' }}>F</Text>
                 <Text style={{ color: '#fff', width: 60, textAlign: 'center' }}>{ex.previousReps || '-'}</Text>
                 <TextInput
-                  style={{ backgroundColor: '#222', color: '#fff', borderRadius: 6, width: 56, height: 28, textAlign: 'center', marginHorizontal: 2, fontSize: 15, borderWidth: 1, borderColor: '#333' }}
+                  style={{ backgroundColor: '#222', color: '#fff', borderRadius: 6, width: 56, height: 28, textAlign: 'center', marginHorizontal: 2, fontSize: 15, borderWidth: 1, borderColor: '#fff' }}
                   placeholder="-"
                   placeholderTextColor="#888"
                   value={serie.weight}
@@ -212,7 +257,7 @@ const TrainingScreen: React.FC = () => {
                   })}
                 />
                 <TextInput
-                  style={{ backgroundColor: '#222', color: '#fff', borderRadius: 6, width: 56, height: 28, textAlign: 'center', marginHorizontal: 2, fontSize: 15, borderWidth: 1, borderColor: '#333' }}
+                  style={{ backgroundColor: '#222', color: '#fff', borderRadius: 6, width: 56, height: 28, textAlign: 'center', marginHorizontal: 2, fontSize: 15, borderWidth: 1, borderColor: '#fff' }}
                   placeholder="-"
                   placeholderTextColor="#888"
                   value={serie.reps}

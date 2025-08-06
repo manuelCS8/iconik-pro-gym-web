@@ -8,6 +8,13 @@ import ManageExercisesScreen from '../screens/admin/ManageExercisesScreen';
 import ManageRoutinesScreen from '../screens/admin/ManageRoutinesScreen';
 import ProfileScreen from '../screens/member/ProfileScreen'; // Los admins también tienen perfil
 import AdminManagementScreen from '../screens/admin/AdminManagementScreen';
+import ExerciseVideoScreen from '../screens/member/ExerciseVideoScreen';
+import MigrateVideosScreen from '../screens/admin/MigrateVideosScreen';
+import MigrateImagesScreen from '../screens/admin/MigrateImagesScreen';
+import TestImageUploadScreen from '../screens/admin/TestImageUploadScreen';
+import UpdateRoutinesScreen from '../screens/admin/UpdateRoutinesScreen';
+import DeleteRoutinesScreen from '../screens/admin/DeleteRoutinesScreen';
+import TestRoutinesScreen from '../screens/admin/TestRoutinesScreen';
 import { COLORS } from '../utils/theme';
 
 export type AdminTabParamList = {
@@ -35,6 +42,15 @@ const GestionStack = () => (
   >
     <Stack.Screen name="ManagementHome" component={AdminManagementScreen} />
     <Stack.Screen 
+      name="CreateUser" 
+      component={require('../screens/admin/CreateUserScreen').default} 
+      options={{
+        headerShown: true,
+        title: 'Crear Usuario',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
       name="ManageMembers" 
       component={ManageMembersScreen}
       options={{ 
@@ -58,6 +74,69 @@ const GestionStack = () => (
       options={{ 
         headerShown: true,
         title: 'Gestionar Rutinas',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen name="CreateRoutine" component={require('../screens/admin/CreateRoutineScreen').default} options={{ headerShown: true, title: 'Crear Rutina', headerBackTitle: 'Atrás' }} />
+    <Stack.Screen name="CreateExercise" component={require('../screens/admin/CreateExerciseScreen').default} options={{ headerShown: true, title: 'Crear Ejercicio', headerBackTitle: 'Atrás' }} />
+    <Stack.Screen 
+      name="ExerciseVideo" 
+      component={ExerciseVideoScreen}
+      options={{ 
+        headerShown: false
+      }}
+    />
+    <Stack.Screen 
+      name="MigrateVideos" 
+      component={MigrateVideosScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Migrar Videos',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="MigrateImages" 
+      component={MigrateImagesScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Migrar Imágenes',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="TestImageUpload" 
+      component={TestImageUploadScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Prueba de Imágenes',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="UpdateRoutines" 
+      component={UpdateRoutinesScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Actualizar Rutinas',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="DeleteRoutines" 
+      component={DeleteRoutinesScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Eliminar Rutinas',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="TestRoutines" 
+      component={TestRoutinesScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Diagnóstico de Rutinas',
         headerBackTitle: 'Atrás'
       }}
     />

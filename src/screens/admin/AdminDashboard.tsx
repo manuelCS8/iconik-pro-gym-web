@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   header: {
     padding: SIZES.paddingLarge,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#181818', // gris oscuro
   },
   welcomeText: {
     fontSize: 26,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff',
+    color: '#ccc', // gris claro
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -263,11 +263,11 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.margin,
   },
   statCard: { backgroundColor: '#222', borderRadius: 12, padding: 18, alignItems: 'center', margin: 6, flex: 1, minWidth: 140 },
-  statNumber: { color: COLORS.primary, fontSize: 24, fontWeight: 'bold' },
+  statNumber: { color: '#ff4444', fontSize: 24, fontWeight: 'bold' },
   statLabel: { color: '#eee', fontSize: 15, marginTop: 4, textAlign: 'center' },
-  card: { backgroundColor: '#222', borderRadius: 16, padding: 18, marginTop: 24, marginBottom: 12 },
+  card: { backgroundColor: '#181818', borderRadius: 16, padding: 18, marginTop: 24, marginBottom: 12 },
   cardTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 12 },
-  actionButton: { backgroundColor: COLORS.primary, borderRadius: 8, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  actionButton: { backgroundColor: '#ff4444', borderRadius: 8, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   actionButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16, marginLeft: 8 },
   activityItem: {
     flexDirection: 'row',
@@ -288,12 +288,12 @@ const styles = StyleSheet.create({
   activityDescription: {
     fontSize: SIZES.fontRegular,
     fontWeight: '600',
-    color: COLORS.secondary,
+    color: '#fff',
     marginBottom: 2,
   },
   activityUser: {
     fontSize: SIZES.fontSmall,
-    color: COLORS.gray,
+    color: '#888',
   },
 });
 

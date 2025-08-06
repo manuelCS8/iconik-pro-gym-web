@@ -1,72 +1,53 @@
-# 🏋️ Iconik Pro Gym - App de Gestión de Gimnasio
+# 🏋️ Iconik Pro Gym - App Móvil
 
-Una aplicación móvil completa desarrollada con **React Native** y **Expo** para la gestión integral de gimnasios, con autenticación de usuarios, gestión de ejercicios, rutinas personalizadas y seguimiento de progreso.
+Una aplicación móvil completa para gimnasios desarrollada con React Native y Expo, que permite a los administradores gestionar rutinas, ejercicios y miembros, mientras que los usuarios pueden seguir entrenamientos personalizados y calcular su nutrición con IA.
 
-## 🚀 Características Principales
+## ✨ Características Principales
 
 ### 👥 Gestión de Usuarios
-- **Autenticación segura** con Firebase Auth
+- **Sistema de autenticación** con Firebase Auth
 - **Roles diferenciados**: Administradores y Miembros
-- **Perfiles personalizados** con información física
-- **Gestión de membresías** con fechas de vencimiento
+- **Perfiles personalizados** con información de entrenamiento
 
-### 💪 Gestión de Ejercicios
-- **Catálogo completo** de ejercicios con videos instructivos
-- **Filtros avanzados** por grupo muscular y equipo
-- **Subida de contenido** por administradores
-- **Información detallada** con instrucciones y consejos
+### 🏋️ Sistema de Entrenamiento
+- **Rutinas del gimnasio**: Creadas por administradores
+- **Rutinas personalizadas**: Los usuarios pueden crear sus propias rutinas
+- **Ejercicios detallados**: Con videos, imágenes y descripciones
+- **Seguimiento de entrenamiento**: Cronómetro, registro de series y progreso
+- **Navegación intuitiva**: Entre ejercicios y rutinas
 
-### 📋 Rutinas Personalizadas
-- **Creación de rutinas** personalizadas
-- **Seguimiento de entrenamientos** en tiempo real
-- **Progreso visual** con gráficos y estadísticas
-- **Historial completo** de entrenamientos
+### 🧠 Calculadora de Nutrición con IA
+- **Análisis de comidas**: Usando OpenAI GPT-4 Vision
+- **Cálculo de calorías**: Basado en la fórmula Mifflin-St Jeor
+- **Macros personalizados**: Proteínas, carbohidratos y grasas
+- **Objetivos personalizables**: Perder, ganar o mantener peso
+- **Límite de uso**: Control de consultas diarias por usuario
 
-### 🎨 Interfaz Moderna
-- **Diseño responsive** y adaptable
-- **Tema oscuro/claro** automático
-- **Navegación intuitiva** con React Navigation
-- **Animaciones fluidas** y transiciones suaves
+### 📱 Interfaz Moderna
+- **Diseño oscuro**: Tema elegante y profesional
+- **Navegación fluida**: Bottom tabs y stack navigation
+- **Componentes reutilizables**: UI consistente en toda la app
+- **Responsive**: Optimizada para diferentes tamaños de pantalla
 
 ## 🛠️ Tecnologías Utilizadas
 
 - **Frontend**: React Native + Expo
 - **Backend**: Firebase (Firestore, Auth, Storage)
-- **Estado Global**: Redux Toolkit
-- **Navegación**: React Navigation v6
-- **UI/UX**: Componentes personalizados
-- **Lenguaje**: TypeScript
-- **Base de datos**: Firestore (NoSQL)
+- **Estado**: Redux Toolkit
+- **Navegación**: React Navigation
+- **IA**: OpenAI GPT-4 Vision API
+- **Base de datos local**: AsyncStorage (temporal)
+- **UI**: Componentes nativos + Iconos Expo
 
-## 📱 Capturas de Pantalla
+## 📋 Requisitos Previos
 
-*[Aquí puedes agregar capturas de pantalla de tu app]*
-
-## 🔥 Configuración de Firebase
-
-Este proyecto utiliza **Firebase real** para todas las funcionalidades:
-
-- **Authentication**: Email/Password
-- **Firestore**: Base de datos en tiempo real
-- **Storage**: Almacenamiento de archivos multimedia
-- **Reglas de seguridad**: Configuradas para roles y permisos
-
-### Configuración Requerida
-
-1. Crear proyecto en [Firebase Console](https://console.firebase.google.com/)
-2. Configurar Authentication, Firestore y Storage
-3. Aplicar reglas de seguridad (ver `FIREBASE_RULES.md`)
-4. Crear usuario administrador inicial
-
-## 🚀 Instalación y Configuración
-
-### Prerrequisitos
 - Node.js (v16 o superior)
 - npm o yarn
 - Expo CLI
 - Cuenta de Firebase
+- Cuenta de OpenAI (para funcionalidad de nutrición)
 
-### Pasos de Instalación
+## 🚀 Instalación
 
 1. **Clonar el repositorio**
 ```bash
@@ -77,129 +58,146 @@ cd iconik-pro-gym
 2. **Instalar dependencias**
 ```bash
 npm install
-# o
-yarn install
 ```
 
 3. **Configurar Firebase**
-   - Copiar configuración de Firebase a `src/config/firebase.ts`
-   - Configurar reglas de Firestore y Storage
-   - Crear usuario administrador
+   - Crear un proyecto en [Firebase Console](https://console.firebase.google.com/)
+   - Descargar `google-services.json` (Android) y `GoogleService-Info.plist` (iOS)
+   - Colocar los archivos en la raíz del proyecto
+   - Configurar las reglas de Firestore (ver `firestore.rules`)
 
-4. **Ejecutar la aplicación**
+4. **Configurar variables de entorno**
+   - Crear archivo `.env` en la raíz
+   - Agregar las claves de Firebase y OpenAI
+
+5. **Ejecutar la aplicación**
 ```bash
-npm start
-# o
-expo start
+npx expo start
 ```
 
-5. **Probar en dispositivo**
-   - Escanear QR con Expo Go (Android/iOS)
-   - O ejecutar en emulador
+## 🔧 Configuración de Firebase
 
-## 📁 Estructura del Proyecto
+### Reglas de Firestore
+```javascript
+// Ver archivo firestore.rules para reglas completas
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para usuarios, ejercicios, rutinas, etc.
+  }
+}
+```
+
+### Estructura de Datos
+- **users**: Información de usuarios y roles
+- **exercises**: Ejercicios con videos e imágenes
+- **routines**: Rutinas del gimnasio
+- **userRoutines**: Rutinas creadas por usuarios
+- **temp_meal_logs**: Registros de nutrición (temporal)
+
+## 📱 Funcionalidades por Rol
+
+### 👨‍💼 Administrador
+- Gestión de ejercicios y videos
+- Creación de rutinas oficiales
+- Administración de miembros
+- Estadísticas del gimnasio
+
+### 👤 Miembro
+- Visualización de rutinas disponibles
+- Creación de rutinas personalizadas
+- Seguimiento de entrenamientos
+- Calculadora de nutrición con IA
+- Perfil personal
+
+## 🧠 Funcionalidad de Nutrición
+
+### Características
+- **Análisis de imágenes**: Sube fotos de comidas
+- **Cálculo automático**: Calorías y macros estimados
+- **Objetivos personalizables**: 5 niveles de intensidad
+- **Historial**: Registro de comidas diarias
+- **Límites de uso**: Control de consultas por día
+
+### Configuración
+- **OpenAI API Key**: Requerida para análisis de imágenes
+- **Límite diario**: Configurable por usuario
+- **Almacenamiento**: Local con sincronización Firebase
+
+## 🏗️ Estructura del Proyecto
 
 ```
 src/
 ├── components/          # Componentes reutilizables
-├── config/             # Configuración (Firebase, etc.)
+├── config/             # Configuración de Firebase
 ├── contexts/           # Contextos de React
-├── navigation/         # Navegadores y stacks
-├── redux/              # Estado global (Redux Toolkit)
+├── hooks/              # Custom hooks
+├── navigation/         # Configuración de navegación
+├── redux/              # Estado global (Redux)
 ├── screens/            # Pantallas de la aplicación
 │   ├── admin/         # Pantallas de administrador
-│   ├── auth/          # Pantallas de autenticación
-│   └── member/        # Pantallas de miembro
-├── services/          # Servicios (API, Firebase, etc.)
-└── utils/             # Utilidades y helpers
+│   ├── auth/          # Autenticación
+│   ├── member/        # Pantallas de miembro
+│   └── nutrition/     # Funcionalidad de nutrición
+├── services/           # Servicios y APIs
+└── utils/              # Utilidades y helpers
 ```
 
-## 🔐 Configuración de Seguridad
+## 🔐 Seguridad
 
-### Reglas de Firestore
-```javascript
-// Ver FIREBASE_RULES.md para configuración completa
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Reglas específicas por colección
-  }
-}
-```
-
-### Reglas de Storage
-```javascript
-// Ver FIREBASE_RULES.md para configuración completa
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    // Reglas para archivos multimedia
-  }
-}
-```
-
-## 👥 Roles y Permisos
-
-### 🔧 Administrador
-- Gestión completa de ejercicios
-- Subida de videos e imágenes
-- Administración de usuarios
-- Acceso a estadísticas globales
-
-### 👤 Miembro
-- Visualización de ejercicios
-- Creación de rutinas personales
-- Seguimiento de progreso
-- Gestión de perfil personal
-
-## 🚀 Despliegue
-
-### Para Producción
-1. Configurar EAS Build
-2. Generar APK/IPA
-3. Subir a Google Play/App Store
-
-### Para Desarrollo
-```bash
-expo start --dev-client
-```
+- **Autenticación**: Firebase Auth con roles
+- **Reglas de Firestore**: Acceso controlado por usuario
+- **Validación**: Datos verificados en frontend y backend
+- **Límites de uso**: Control de consultas de IA
 
 ## 📊 Estado del Proyecto
 
-- ✅ **Autenticación**: Firebase Auth implementado
-- ✅ **Base de datos**: Firestore configurado
-- ✅ **Storage**: Firebase Storage activo
-- ✅ **Navegación**: React Navigation v6
-- ✅ **Estado**: Redux Toolkit
-- ✅ **UI/UX**: Componentes modernos
-- 🔄 **Testing**: En desarrollo
-- 🔄 **CI/CD**: En desarrollo
+### ✅ Completado
+- [x] Sistema de autenticación
+- [x] Gestión de ejercicios
+- [x] Rutinas del gimnasio
+- [x] Rutinas personalizadas
+- [x] Sistema de entrenamiento
+- [x] Calculadora de nutrición con IA
+- [x] Interfaz de usuario
+- [x] Navegación completa
+
+### 🚧 En Desarrollo
+- [ ] Reportes de progreso
+- [ ] Notificaciones push
+- [ ] Integración con wearables
+- [ ] Exportación de datos
 
 ## 🤝 Contribuir
 
 1. Fork el proyecto
-2. Crear rama para feature (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
 4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
+5. Abre un Pull Request
 
-## 📝 Licencia
+## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
 
 ## 👨‍💻 Autor
 
-**Tu Nombre**
-- GitHub: [@tu-usuario](https://github.com/tu-usuario)
-- LinkedIn: [Tu LinkedIn](https://linkedin.com/in/tu-perfil)
+**Tu Nombre** - [@tu-twitter](https://twitter.com/tu-twitter)
 
 ## 🙏 Agradecimientos
 
 - [Expo](https://expo.dev/) por el framework
 - [Firebase](https://firebase.google.com/) por el backend
+- [OpenAI](https://openai.com/) por la API de IA
 - [React Navigation](https://reactnavigation.org/) por la navegación
-- [Redux Toolkit](https://redux-toolkit.js.org/) por el estado global
+
+## 📞 Soporte
+
+Si tienes preguntas o necesitas ayuda:
+- 📧 Email: tu-email@ejemplo.com
+- 🐛 Issues: [GitHub Issues](https://github.com/tu-usuario/iconik-pro-gym/issues)
+- 📖 Documentación: [Wiki del proyecto](https://github.com/tu-usuario/iconik-pro-gym/wiki)
 
 ---
 
-⭐ **¡Dale una estrella si te gustó el proyecto!** ⭐ 
+⭐ **¡Dale una estrella al proyecto si te gustó!** 

@@ -5,9 +5,13 @@ import TrainingScreen from "../screens/member/TrainingScreen";
 import MyRoutinesScreen from "../screens/member/MyRoutinesScreen";
 import RoutinesScreen from "../screens/member/RoutinesScreen"; // renombrar a ExploreRoutines
 import CreateRoutineScreen from "../screens/member/CreateRoutineScreen";
+import ConfigureExerciseScreen from "../screens/member/ConfigureExerciseScreen";
 import RoutineDetail from "../screens/member/RoutineDetail";
+import RoutineDetailScreen from "../screens/member/RoutineDetailScreen";
+import TrainingSessionScreen from "../screens/member/TrainingSessionScreen";
 import ExercisesScreen from "../screens/member/ExercisesScreen";
 import ExerciseDetailScreen from "../screens/member/ExerciseDetailScreen";
+import ExerciseVideoScreen from "../screens/member/ExerciseVideoScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -28,10 +32,32 @@ const EntrenarStack = () => (
     <Stack.Screen name="MyRoutines" component={MyRoutinesScreen} />
     <Stack.Screen name="ExploreRoutines" component={RoutinesScreen} />
     <Stack.Screen name="CreateRoutine" component={CreateRoutineScreen} />
+    <Stack.Screen 
+      name="ConfigureExercise" 
+      component={ConfigureExerciseScreen}
+      options={{ 
+        headerShown: false
+      }}
+    />
+
     <Stack.Screen name="Training" component={TrainingScreen} />
     <Stack.Screen 
       name="RoutineDetail" 
-      component={RoutineDetail}
+      component={RoutineDetailScreen}
+      options={{ 
+        headerShown: false
+      }}
+    />
+    <Stack.Screen 
+      name="RoutineDetailScreen" 
+      component={RoutineDetailScreen}
+      options={{ 
+        headerShown: false
+      }}
+    />
+    <Stack.Screen 
+      name="TrainingSession" 
+      component={TrainingSessionScreen}
       options={{ 
         headerShown: false
       }}
@@ -52,6 +78,13 @@ const EntrenarStack = () => (
         headerShown: true,
         title: 'Detalle de Ejercicio',
         headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="ExerciseVideo" 
+      component={ExerciseVideoScreen}
+      options={{ 
+        headerShown: false
       }}
     />
   </Stack.Navigator>

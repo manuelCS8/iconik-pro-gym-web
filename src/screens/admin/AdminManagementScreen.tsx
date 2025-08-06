@@ -1,44 +1,143 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { COLORS, SIZES } from "../../utils/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../contexts/AuthContext";
+import { authService } from "../../services/authService";
 
 const AdminManagementScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalAdmins: 0,
+    totalMembers: 0,
+  });
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const users = await authService.getAllUsers();
+      const admins = users.filter(u => u.role === 'ADMIN');
+      const members = users.filter(u => u.role === 'MEMBER');
+      
+      setStats({
+        totalUsers: users.length,
+        totalAdmins: admins.length,
+        totalMembers: members.length,
+      });
+    } catch (error) {
+      console.error('Error cargando estadísticas:', error);
+    }
+  };
 
   const managementOptions = [
+    {
+      title: "Crear Usuario",
+      subtitle: "Crear nuevos miembros y administradores",
+      icon: "person-add",
+      screen: "CreateUser",
+      color: "#4CAF50",
+    },
     {
       title: "Gestionar Miembros",
       subtitle: "Ver y administrar usuarios",
       icon: "people",
       screen: "ManageMembers",
-      color: "#4CAF50",
+      color: "#2196F3",
     },
     {
       title: "Gestionar Ejercicios",
       subtitle: "Añadir y editar ejercicios",
       icon: "fitness",
       screen: "ManageExercises",
-      color: "#2196F3",
+      color: "#FF9800",
     },
     {
       title: "Gestionar Rutinas",
       subtitle: "Crear y modificar rutinas",
       icon: "list",
       screen: "ManageRoutines",
+      color: "#9C27B0",
+    },
+    {
+      title: "Migrar Videos",
+      subtitle: "Subir videos locales a Firebase Storage",
+      icon: "cloud-upload",
+      screen: "MigrateVideos",
+      color: "#E91E63",
+    },
+    {
+      title: "Migrar Imágenes",
+      subtitle: "Subir imágenes locales a Firebase Storage",
+      icon: "image",
+      screen: "MigrateImages",
+      color: "#4CAF50",
+    },
+    {
+      title: "Prueba de Imágenes",
+      subtitle: "Probar subida de imágenes a Firebase Storage",
+      icon: "flask",
+      screen: "TestImageUpload",
+      color: "#9C27B0",
+    },
+    {
+      title: "Actualizar Rutinas",
+      subtitle: "Hacer públicas las rutinas existentes",
+      icon: "refresh-circle",
+      screen: "UpdateRoutines",
       color: "#FF9800",
+    },
+    {
+      title: "Eliminar Rutinas",
+      subtitle: "Eliminar rutinas existentes del sistema",
+      icon: "trash",
+      screen: "DeleteRoutines",
+      color: "#F44336",
+    },
+    {
+      title: "Diagnóstico de Rutinas",
+      subtitle: "Diagnosticar problemas con rutinas y permisos",
+      icon: "bug",
+      screen: "TestRoutines",
+      color: "#FF5722",
     },
   ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>🔧 <Text style={{ color: COLORS.primary }}>Gestión</Text></Text>
-        <Text style={styles.subtitle}>Panel de administración</Text>
-      </View>
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>🔧 Panel de Administración</Text>
+          <Text style={styles.subtitle}>Gestiona tu gimnasio</Text>
+        </View>
+
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <Text style={styles.statsTitle}>📊 Estadísticas</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{stats.totalUsers}</Text>
+              <Text style={styles.statLabel}>Total Usuarios</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{stats.totalAdmins}</Text>
+              <Text style={styles.statLabel}>Administradores</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{stats.totalMembers}</Text>
+              <Text style={styles.statLabel}>Miembros</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Management Options */}
         <View style={styles.optionsContainer}>
+          <Text style={styles.sectionTitle}>⚙️ Gestión</Text>
           {managementOptions.map((option, idx) => (
             <TouchableOpacity
               key={option.title}
@@ -46,30 +145,61 @@ const AdminManagementScreen: React.FC = () => {
               onPress={() => navigation.navigate(option.screen)}
             >
               <View style={[styles.iconCircle, { backgroundColor: option.color }]}> 
-                <Ionicons name={option.icon as any} size={32} color="#fff" />
+                <Ionicons name={option.icon as any} size={24} color="#fff" />
               </View>
               <View style={styles.optionTextContainer}>
                 <Text style={styles.optionTitle}>{option.title}</Text>
                 <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
               </View>
+              <Ionicons name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActionsContainer}>
+          <Text style={styles.sectionTitle}>🚀 Acciones Rápidas</Text>
+          
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            onPress={() => navigation.navigate("CreateUser")}
+          >
+            <Ionicons name="person-add" size={24} color="#4CAF50" />
+            <Text style={styles.quickActionText}>Crear Nuevo Usuario</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            onPress={() => navigation.navigate("CreateExercise")}
+          >
+            <Ionicons name="fitness" size={24} color="#2196F3" />
+            <Text style={styles.quickActionText}>Añadir Ejercicio</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            onPress={() => navigation.navigate("CreateRoutine")}
+          >
+            <Ionicons name="list" size={24} color="#FF9800" />
+            <Text style={styles.quickActionText}>Crear Nueva Rutina</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
-
-export default AdminManagementScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
   },
+  scrollContainer: {
+    paddingBottom: 32,
+  },
   header: {
     padding: 24,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#181818',
     alignItems: 'center',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -82,54 +212,24 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff',
-    opacity: 0.8,
-    marginBottom: 12,
+    color: '#ccc',
+    opacity: 0.9,
   },
-  optionsContainer: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-  },
-  optionCard: {
-    backgroundColor: '#222',
+  statsContainer: {
+    backgroundColor: '#181818',
     borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
-    marginBottom: 18,
-    borderLeftWidth: 6,
+    padding: 20,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  iconCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 18,
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  optionTitle: {
+  statsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-  },
-  optionSubtitle: {
-    fontSize: 15,
-    color: '#ccc',
-    marginTop: 2,
-  },
-  statsContainer: {
-    backgroundColor: COLORS.white || '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-  },
-  statsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.text || '#333',
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -141,48 +241,86 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.primary || '#ff4444',
+    color: '#ff4444',
   },
   statLabel: {
     fontSize: 12,
-    color: COLORS.text || '#666',
+    color: '#ccc',
     marginTop: 4,
     textAlign: 'center',
   },
-  activityContainer: {
-    backgroundColor: COLORS.white || '#fff',
-    borderRadius: 12,
-    padding: 20,
+  optionsContainer: {
+    marginHorizontal: 16,
+    marginTop: 8,
   },
-  activityTitle: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text || '#333',
-    marginBottom: 15,
+    color: '#fff',
+    marginBottom: 16,
+    marginTop: 8,
   },
-  activityItem: {
+  optionCard: {
+    backgroundColor: '#181818',
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primary || '#ff4444',
-    marginRight: 12,
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
   },
-  activityText: {
+  optionTextContainer: {
     flex: 1,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  optionSubtitle: {
     fontSize: 14,
-    color: COLORS.text || '#333',
+    color: '#ccc',
+    marginTop: 2,
   },
-  activityTime: {
-    fontSize: 12,
-    color: '#999',
+  quickActionsContainer: {
+    marginHorizontal: 16,
+    marginTop: 24,
   },
-}); 
+  quickActionCard: {
+    backgroundColor: '#181818',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickActionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 12,
+    flex: 1,
+  },
+});
+
+export default AdminManagementScreen; 

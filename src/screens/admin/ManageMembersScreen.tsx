@@ -10,16 +10,21 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
+  Platform,
+  SafeAreaView,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, GLOBAL_STYLES } from '../../utils/theme';
 import RoleGuard from '../../components/RoleGuard';
+import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 interface Member {
   id: string;
   name: string;
   email: string;
-  role: 'Admin' | 'Member';
+  role: 'ADMIN' | 'MEMBER';
   membershipStart?: string;
   membershipEnd?: string;
   weight?: number;
@@ -31,7 +36,7 @@ interface Member {
 interface NewMemberForm {
   name: string;
   email: string;
-  role: 'Admin' | 'Member';
+  role: 'ADMIN' | 'MEMBER';
   membershipStart: string;
   membershipEnd: string;
   weight: string;
@@ -44,7 +49,7 @@ const ManageMembersScreen: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
   const [searchText, setSearchText] = useState('');
-  const [filterRole, setFilterRole] = useState<'All' | 'Admin' | 'Member'>('All');
+  const [filterRole, setFilterRole] = useState<'All' | 'ADMIN' | 'MEMBER'>('All');
   const [filterMembership, setFilterMembership] = useState<'All' | 'Active' | 'Expired'>('All');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -52,7 +57,7 @@ const ManageMembersScreen: React.FC = () => {
   const [newMember, setNewMember] = useState<NewMemberForm>({
     name: '',
     email: '',
-    role: 'Member',
+    role: 'MEMBER',
     membershipStart: new Date().toISOString().split('T')[0],
     membershipEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     weight: '',
@@ -60,6 +65,11 @@ const ManageMembersScreen: React.FC = () => {
     age: '',
     phone: '',
   });
+
+  // Lógica para abrir el modal
+  const [renewMember, setRenewMember] = useState<Member | null>(null);
+  const [renewDate, setRenewDate] = useState('');
+  const [tolerancia, setTolerancia] = useState(false);
 
   useEffect(() => {
     loadMembers();
@@ -72,77 +82,28 @@ const ManageMembersScreen: React.FC = () => {
   const loadMembers = async () => {
     try {
       setIsLoading(true);
-      
-      // Simular datos de miembros (en producción vendría de Firestore)
-      const mockMembers: Member[] = [
-        {
-          id: "1",
-          name: "Carlos Ruiz",
-          email: "carlos@email.com",
-          role: "Member",
-          membershipStart: "2024-01-15",
-          membershipEnd: "2024-12-15",
-          weight: 75,
-          height: 180,
-          age: 28,
-          phone: "+1234567890",
-        },
-        {
-          id: "2",
-          name: "María González",
-          email: "maria@email.com",
-          role: "Member",
-          membershipStart: "2024-02-01",
-          membershipEnd: "2024-11-01",
-          weight: 62,
-          height: 165,
-          age: 25,
-          phone: "+1234567891",
-        },
-        {
-          id: "3",
-          name: "Admin Usuario",
-          email: "admin@iconik.com",
-          role: "Admin",
-          membershipStart: "2023-01-01",
-          membershipEnd: "2025-01-01",
-          weight: 80,
-          height: 175,
-          age: 35,
-          phone: "+1234567892",
-        },
-        {
-          id: "4",
-          name: "Ana Silva",
-          email: "ana@email.com",
-          role: "Member",
-          membershipStart: "2024-03-01",
-          membershipEnd: "2024-09-01", // Expirada
-          weight: 58,
-          height: 170,
-          age: 30,
-          phone: "+1234567893",
-        },
-        {
-          id: "5",
-          name: "Juan Pérez",
-          email: "juan@email.com",
-          role: "Member",
-          membershipStart: "2024-06-01",
-          membershipEnd: "2025-06-01",
-          weight: 85,
-          height: 185,
-          age: 32,
-          phone: "+1234567894",
-        },
-      ];
-
-      setMembers(mockMembers);
-      console.log(`✅ Cargados ${mockMembers.length} miembros`);
-
+      // Consulta real a Firestore
+      const usersRef = collection(db, 'users');
+      const snapshot = await getDocs(usersRef);
+      const membersFromFirestore: Member[] = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          name: data.displayName || data.name || '',
+          email: data.email || '',
+          role: data.role || 'MEMBER',
+          membershipStart: data.membershipStart || '',
+          membershipEnd: data.membershipEnd ? (typeof data.membershipEnd === 'string' ? data.membershipEnd.split('T')[0] : data.membershipEnd.toDate().toISOString().split('T')[0]) : '',
+          weight: data.weight,
+          height: data.height,
+          age: data.age,
+          phone: data.phone || '',
+        };
+      });
+      setMembers(membersFromFirestore);
     } catch (error) {
-      console.error("Error loading members:", error);
-      Alert.alert("Error", "No se pudieron cargar los miembros");
+      Alert.alert('Error', 'No se pudieron cargar los miembros.');
+      setMembers([]);
     } finally {
       setIsLoading(false);
     }
@@ -229,7 +190,7 @@ const ManageMembersScreen: React.FC = () => {
       setNewMember({
         name: '',
         email: '',
-        role: 'Member',
+        role: 'MEMBER',
         membershipStart: new Date().toISOString().split('T')[0],
         membershipEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         weight: '',
@@ -250,39 +211,68 @@ const ManageMembersScreen: React.FC = () => {
     }
   };
 
+  // Permitir renovar membresía y editar fecha manualmente
   const handleRenewMembership = (member: Member) => {
-    Alert.prompt(
-      "Renovar Membresía",
-      `¿Cuántos meses quieres renovar para ${member.name}?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Renovar",
-          onPress: (months) => {
-            const monthsNum = parseInt(months || '1');
-            if (isNaN(monthsNum) || monthsNum <= 0) {
-              Alert.alert("Error", "Ingresa un número válido de meses");
-              return;
-            }
-            
-            const newEndDate = new Date();
-            newEndDate.setMonth(newEndDate.getMonth() + monthsNum);
-            
-            const updatedMembers = members.map(m => 
-              m.id === member.id 
-                ? { ...m, membershipEnd: newEndDate.toISOString().split('T')[0] }
-                : m
-            );
-            setMembers(updatedMembers);
-            
-            Alert.alert("Éxito", `Membresía renovada por ${monthsNum} meses`);
-            console.log(`✅ Membresía renovada: ${member.name} - ${monthsNum} meses`);
-          }
+    setRenewMember(member);
+    setRenewDate(member.membershipEnd || '');
+    setTolerancia(false);
+  };
+
+  // Lógica para formatear la fecha mientras escribe, usando guiones
+  const formatRenewDate = (val: string) => {
+    const digits = val.replace(/\D/g, '');
+    let formatted = '';
+    if (digits.length <= 4) formatted = digits;
+    else if (digits.length <= 6) formatted = `${digits.slice(0,4)}-${digits.slice(4)}`;
+    else formatted = `${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}`;
+    return formatted;
+  };
+  const handleRenewDateInput = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0,8);
+    setRenewDate(digits);
+  };
+
+  const handleRenewModalSave = async () => {
+    if (!renewMember || !renewDate.match(/^\d{8}$/)) {
+      Alert.alert('Error', 'Fecha inválida. Usa el formato YYYYMMDD.');
+      return;
+    }
+    // Convierte a YYYY-MM-DD
+    const formattedDate = `${renewDate.slice(0,4)}-${renewDate.slice(4,6)}-${renewDate.slice(6,8)}`;
+    let newDate = new Date(formattedDate);
+    if (isNaN(newDate.getTime())) {
+      Alert.alert('Error', 'Fecha inválida.');
+      return;
+    }
+    if (tolerancia) {
+      newDate.setDate(newDate.getDate() + 3);
+    }
+    let attempts = 0;
+    const maxAttempts = 3;
+    let success = false;
+    let lastError = null;
+    while (attempts < maxAttempts && !success) {
+      try {
+        const userRef = doc(db, 'users', renewMember.id);
+        await updateDoc(userRef, {
+          membershipEnd: newDate.toISOString().split('T')[0],
+          isActive: true,
+        });
+        Alert.alert('Éxito', 'Membresía renovada');
+        setRenewMember(null);
+        loadMembers();
+        success = true;
+      } catch (error) {
+        lastError = error;
+        attempts++;
+        if (attempts < maxAttempts) {
+          await new Promise(res => setTimeout(res, 1000)); // espera 1 segundo antes de reintentar
         }
-      ],
-      "plain-text",
-      "1"
-    );
+      }
+    }
+    if (!success) {
+      Alert.alert('Error', 'No se pudo renovar la membresía después de varios intentos. Por favor revisa tu conexión a internet e inténtalo de nuevo.');
+    }
   };
 
   const handleDeleteMember = (member: Member) => {
@@ -311,54 +301,31 @@ const ManageMembersScreen: React.FC = () => {
   };
 
   const renderMember = ({ item }: { item: Member }) => {
-    const status = getMembershipStatus(item.membershipEnd);
-    
+    const isAdmin = item.role === 'ADMIN';
+    const daysLeft = item.membershipEnd ? Math.ceil((new Date(item.membershipEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
     return (
       <View style={styles.memberCard}>
-        <View style={styles.memberHeader}>
-          <View style={styles.memberInfo}>
-            <Text style={styles.memberName}>{item.name}</Text>
-            <Text style={styles.memberEmail}>{item.email}</Text>
-            <View style={styles.memberDetails}>
-              <View style={[styles.roleTag, { backgroundColor: item.role === 'Admin' ? COLORS.secondary : COLORS.primary }]}>
-                <Text style={styles.roleText}>{item.role}</Text>
-              </View>
-              <View style={[styles.statusTag, { backgroundColor: status.color }]}>
-                <Text style={styles.statusText}>{status.text}</Text>
-              </View>
+        <Text style={styles.memberName}>{item.name}</Text>
+        <Text style={styles.memberEmail}>{item.email}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+          <View style={[styles.roleTag, { backgroundColor: isAdmin ? '#222' : '#E31C1F' }]}> 
+            <Text style={styles.roleText}>{item.role}</Text>
+          </View>
+          {!isAdmin && daysLeft !== null && (
+            <View style={styles.daysTag}>
+              <Text style={styles.daysText}>{daysLeft} días</Text>
             </View>
-            {item.membershipEnd && (
-              <Text style={styles.membershipDate}>
-                Expira: {formatDate(item.membershipEnd)}
-              </Text>
-            )}
-          </View>
-          
-          <View style={styles.memberActions}>
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: COLORS.success }]}
-              onPress={() => handleRenewMembership(item)}
-            >
-              <Ionicons name="refresh" size={16} color={COLORS.white} />
-              <Text style={styles.actionButtonText}>Renovar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: COLORS.error }]}
-              onPress={() => handleDeleteMember(item)}
-            >
-              <Ionicons name="trash" size={16} color={COLORS.white} />
-              <Text style={styles.actionButtonText}>Eliminar</Text>
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
-        
-        {(item.weight || item.height || item.age) && (
-          <View style={styles.memberStats}>
-            {item.weight && <Text style={styles.statText}>Peso: {item.weight}kg</Text>}
-            {item.height && <Text style={styles.statText}>Altura: {item.height}cm</Text>}
-            {item.age && <Text style={styles.statText}>Edad: {item.age} años</Text>}
-          </View>
+        {!isAdmin && item.membershipEnd && (
+          <Text style={styles.memberExpire}>Expira: {item.membershipEnd}</Text>
+        )}
+        {item.age && <Text style={styles.memberAge}>Edad: {item.age} años</Text>}
+        {/* Botón de renovar solo para miembros */}
+        {!isAdmin && (
+          <TouchableOpacity style={styles.renewButton} onPress={() => handleRenewMembership(item)}>
+            <Text style={styles.renewButtonText}>Renovar</Text>
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -371,17 +338,12 @@ const ManageMembersScreen: React.FC = () => {
     >
       <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Gestión de Miembros</Text>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Ionicons name="person-add" size={20} color={COLORS.white} />
-            <Text style={styles.addButtonText}>Agregar</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#181818', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#fff' }}>Gestión de Miembros</Text>
+        <TouchableOpacity style={{ backgroundColor: '#ff4444', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' }} onPress={() => setShowAddModal(true)}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', marginRight: 6 }}>+ Agregar</Text>
+        </TouchableOpacity>
+      </View>
         
         {/* Filtros y búsqueda */}
         <View style={styles.filtersContainer}>
@@ -411,19 +373,19 @@ const ManageMembersScreen: React.FC = () => {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.filterTag, filterRole === 'Admin' && styles.activeFilterTag]}
-              onPress={() => setFilterRole('Admin')}
+              style={[styles.filterTag, filterRole === 'ADMIN' && styles.activeFilterTag]}
+              onPress={() => setFilterRole('ADMIN')}
             >
-              <Text style={[styles.filterTagText, filterRole === 'Admin' && styles.activeFilterTagText]}>
+              <Text style={[styles.filterTagText, filterRole === 'ADMIN' && styles.activeFilterTagText]}>
                 Admins
               </Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.filterTag, filterRole === 'Member' && styles.activeFilterTag]}
-              onPress={() => setFilterRole('Member')}
+              style={[styles.filterTag, filterRole === 'MEMBER' && styles.activeFilterTag]}
+              onPress={() => setFilterRole('MEMBER')}
             >
-              <Text style={[styles.filterTagText, filterRole === 'Member' && styles.activeFilterTagText]}>
+              <Text style={[styles.filterTagText, filterRole === 'MEMBER' && styles.activeFilterTagText]}>
                 Miembros
               </Text>
             </TouchableOpacity>
@@ -448,27 +410,32 @@ const ManageMembersScreen: React.FC = () => {
           </ScrollView>
         </View>
         
-        <Text style={styles.resultsText}>
-          {filteredMembers.length} miembro{filteredMembers.length !== 1 ? 's' : ''} encontrado{filteredMembers.length !== 1 ? 's' : ''}
-        </Text>
+        {/* 1. Quitar la barra negra de 'miembros encontrados' y asegurar fondo negro */}
+        {/* <Text style={styles.resultsText}>{filteredMembers.length} miembros encontrados</Text> */}
       </View>
 
       {/* Lista de miembros */}
       <FlatList
-        data={filteredMembers}
+        data={members}
         renderItem={renderMember}
         keyExtractor={item => item.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-        }
+        // Remover RefreshControl temporalmente para evitar el error de texto suelto
+        // refreshControl={
+        //   <RefreshControl 
+        //     refreshing={isRefreshing} 
+        //     onRefresh={onRefresh}
+        //     colors={[COLORS.primary]}
+        //     tintColor={COLORS.primary}
+        //   />
+        // }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={64} color={COLORS.gray} />
             <Text style={styles.emptyText}>No se encontraron miembros</Text>
             <Text style={styles.emptySubtext}>
-              {searchText ? "Prueba con otros términos de búsqueda" : "Agrega el primer miembro"}
+              {searchText ? "Prueba con otros términos de búsqueda" : "Los miembros aparecerán aquí"}
             </Text>
           </View>
         }
@@ -526,18 +493,18 @@ const ManageMembersScreen: React.FC = () => {
               <Text style={styles.formLabel}>Rol</Text>
               <View style={styles.roleSelector}>
                 <TouchableOpacity 
-                  style={[styles.roleOption, newMember.role === 'Member' && styles.activeRoleOption]}
-                  onPress={() => setNewMember(prev => ({ ...prev, role: 'Member' }))}
+                  style={[styles.roleOption, newMember.role === 'MEMBER' && styles.activeRoleOption]}
+                  onPress={() => setNewMember(prev => ({ ...prev, role: 'MEMBER' }))}
                 >
-                  <Text style={[styles.roleOptionText, newMember.role === 'Member' && styles.activeRoleOptionText]}>
+                  <Text style={[styles.roleOptionText, newMember.role === 'MEMBER' && styles.activeRoleOptionText]}>
                     Miembro
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.roleOption, newMember.role === 'Admin' && styles.activeRoleOption]}
-                  onPress={() => setNewMember(prev => ({ ...prev, role: 'Admin' }))}
+                  style={[styles.roleOption, newMember.role === 'ADMIN' && styles.activeRoleOption]}
+                  onPress={() => setNewMember(prev => ({ ...prev, role: 'ADMIN' }))}
                 >
-                  <Text style={[styles.roleOptionText, newMember.role === 'Admin' && styles.activeRoleOptionText]}>
+                  <Text style={[styles.roleOptionText, newMember.role === 'ADMIN' && styles.activeRoleOptionText]}>
                     Admin
                   </Text>
                 </TouchableOpacity>
@@ -619,20 +586,57 @@ const ManageMembersScreen: React.FC = () => {
           </ScrollView>
         </View>
       </Modal>
-    </View>
+
+      {/* Modal de renovación */}
+      <Modal visible={!!renewMember} transparent animationType="slide" onRequestClose={() => setRenewMember(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#181818', borderRadius: 16, padding: 24, width: '90%' }}>
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 12 }}>Renovar Membresía</Text>
+            <Text style={{ color: '#ccc', marginBottom: 8 }}>Miembro: {renewMember?.name}</Text>
+            <Text style={{ color: '#ccc', marginBottom: 8 }}>Fecha de inscripción: {renewMember?.membershipStart || 'N/A'}</Text>
+            <Text style={{ color: '#fff', marginBottom: 4 }}>Nueva fecha de expiración:</Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#222', color: '#fff', marginBottom: 12 }}
+              value={formatRenewDate(renewDate)}
+              onChangeText={handleRenewDateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#888"
+              keyboardType="numeric"
+              maxLength={10}
+            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Switch value={tolerancia} onValueChange={setTolerancia} thumbColor={tolerancia ? '#ff4444' : '#888'} trackColor={{ true: '#ff4444', false: '#333' }} />
+              <Text style={{ color: '#ccc', marginLeft: 8 }}>Agregar tolerancia de 3 días</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <TouchableOpacity style={{ marginRight: 16 }} onPress={() => setRenewMember(null)}>
+                <Text style={{ color: '#ccc', fontWeight: 'bold' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ backgroundColor: '#ff4444', borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10 }} onPress={handleRenewModalSave}>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </RoleGuard>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    ...GLOBAL_STYLES.container,
+    flex: 1,
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SIZES.margin,
+    backgroundColor: '#181818',
+    padding: SIZES.padding,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
   headerTop: {
     flexDirection: 'row',
@@ -643,10 +647,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: SIZES.fontLarge,
     fontWeight: 'bold',
-    color: COLORS.secondary,
+    color: '#fff',
   },
   addButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#ff4444',
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.padding / 2,
     borderRadius: SIZES.radius,
@@ -654,7 +658,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addButtonText: {
-    color: COLORS.white,
+    color: '#fff',
     fontWeight: 'bold',
     marginLeft: 4,
   },
@@ -664,16 +668,20 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     marginBottom: SIZES.margin,
+    backgroundColor: '#222',
+    borderRadius: SIZES.radius,
+    paddingHorizontal: SIZES.padding / 2,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#181818',
+    color: '#fff',
     padding: SIZES.padding,
     borderRadius: SIZES.radius,
     marginRight: SIZES.padding / 2,
     fontSize: SIZES.fontRegular,
     borderWidth: 1,
-    borderColor: COLORS.grayLight,
+    borderColor: '#333',
   },
   searchButton: {
     backgroundColor: COLORS.primary,
@@ -695,21 +703,21 @@ const styles = StyleSheet.create({
   filterTag: {
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.padding / 2,
-    backgroundColor: COLORS.grayLight,
+    backgroundColor: '#222',
     borderRadius: SIZES.radius,
     marginRight: SIZES.padding / 2,
     marginBottom: SIZES.padding / 2,
   },
   activeFilterTag: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#ff4444',
   },
   filterTagText: {
     fontSize: SIZES.fontSmall,
-    color: COLORS.gray,
-    fontWeight: 'bold',
+    color: '#ccc',
+    fontWeight: '600',
   },
   activeFilterTagText: {
-    color: COLORS.white,
+    color: '#fff',
   },
   resultsText: {
     fontSize: SIZES.fontSmall,
@@ -723,7 +731,15 @@ const styles = StyleSheet.create({
     padding: SIZES.padding,
   },
   memberCard: {
-    ...GLOBAL_STYLES.card,
+    backgroundColor: '#181818',
+    borderRadius: 12,
+    padding: SIZES.padding,
+    marginBottom: SIZES.margin,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   memberHeader: {
     flexDirection: 'row',
@@ -735,28 +751,27 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: SIZES.fontMedium,
     fontWeight: 'bold',
-    color: COLORS.secondary,
-    marginBottom: 4,
+    color: '#fff',
   },
   memberEmail: {
-    fontSize: SIZES.fontRegular,
-    color: COLORS.gray,
-    marginBottom: SIZES.margin / 2,
+    fontSize: SIZES.fontSmall,
+    color: '#ccc',
+    marginBottom: 4,
   },
   memberDetails: {
     flexDirection: 'row',
     marginBottom: SIZES.margin / 2,
   },
   roleTag: {
-    paddingHorizontal: SIZES.padding / 2,
+    paddingHorizontal: 10,
     paddingVertical: 2,
     borderRadius: 4,
-    marginRight: SIZES.margin / 2,
+    marginRight: 8,
   },
   roleText: {
-    fontSize: SIZES.fontSmall,
-    color: COLORS.white,
+    color: '#fff',
     fontWeight: 'bold',
+    fontSize: SIZES.fontSmall,
   },
   statusTag: {
     paddingHorizontal: SIZES.padding / 2,
@@ -894,6 +909,41 @@ const styles = StyleSheet.create({
   },
   activeRoleOptionText: {
     color: COLORS.white,
+  },
+  daysTag: {
+    backgroundColor: '#444',
+    paddingHorizontal: SIZES.padding / 2,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: SIZES.margin / 2,
+  },
+  daysText: {
+    fontSize: SIZES.fontSmall,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  memberExpire: {
+    fontSize: SIZES.fontSmall,
+    color: '#ccc',
+    marginTop: SIZES.margin / 2,
+  },
+  memberAge: {
+    fontSize: SIZES.fontSmall,
+    color: '#ccc',
+    marginTop: SIZES.margin / 2,
+  },
+  renewButton: {
+    backgroundColor: '#ff4444',
+    paddingHorizontal: SIZES.padding,
+    paddingVertical: SIZES.padding / 2,
+    borderRadius: SIZES.radius,
+    alignItems: 'center',
+    marginTop: SIZES.margin / 2,
+  },
+  renewButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: SIZES.fontSmall,
   },
 });
 

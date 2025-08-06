@@ -184,74 +184,31 @@ const CreateExerciseScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Crear Nuevo Ejercicio</Text>
-        <Text style={styles.subtitle}>Agrega un nuevo ejercicio a la biblioteca</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: '#000' }}>
+      <View style={{ padding: 20, backgroundColor: '#181818', borderBottomWidth: 1, borderBottomColor: '#333' }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 4 }}>Agregar Ejercicio</Text>
+        <Text style={{ fontSize: 16, color: '#ccc' }}>Agrega un nuevo ejercicio a la biblioteca</Text>
       </View>
-
-      <View style={styles.form}>
-        {/* Información básica */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Información Básica</Text>
-          
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Nombre del Ejercicio *</Text>
-            <TextInput
-              style={styles.input}
-              value={form.name}
-              onChangeText={(value) => handleInputChange('name', value)}
-              placeholder="Ej: Press de Banca"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Descripción *</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={form.description}
-              onChangeText={(value) => handleInputChange('description', value)}
-              placeholder="Describe el ejercicio..."
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Grupo Muscular</Text>
-              <TextInput
-                style={styles.input}
-                value={form.muscleGroup}
-                onChangeText={(value) => handleInputChange('muscleGroup', value)}
-                placeholder="Ej: Pecho"
-              />
+      <View style={{ padding: 20 }}>
+        <View style={{ backgroundColor: '#181818', borderRadius: 12, padding: 20, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', color: '#fff', marginBottom: 16 }}>Información Básica</Text>
+          <Text style={{ fontSize: 16, fontWeight: '500', color: '#fff', marginBottom: 8 }}>Nombre del Ejercicio *</Text>
+          <TextInput style={{ borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#222', color: '#fff', marginBottom: 16 }} value={form.name} onChangeText={(value) => handleInputChange('name', value)} placeholder="Ej: Press de banca con mancuernas" placeholderTextColor="#888" />
+          <Text style={{ fontSize: 16, fontWeight: '500', color: '#fff', marginBottom: 8 }}>Descripción *</Text>
+          <TextInput style={{ borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#222', color: '#fff', marginBottom: 16, height: 80, textAlignVertical: 'top' }} value={form.description} onChangeText={(value) => handleInputChange('description', value)} placeholder="Describe el ejercicio..." placeholderTextColor="#888" multiline numberOfLines={3} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ width: '48%' }}>
+              <Text style={{ fontSize: 16, fontWeight: '500', color: '#fff', marginBottom: 8 }}>Grupo Muscular</Text>
+              <TextInput style={{ borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#222', color: '#fff', marginBottom: 16 }} value={form.muscleGroup} onChangeText={(value) => handleInputChange('muscleGroup', value)} placeholder="Ej: Pecho" placeholderTextColor="#888" />
             </View>
-
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Dificultad</Text>
-              <TextInput
-                style={styles.input}
-                value={form.difficulty}
-                onChangeText={(value) => handleInputChange('difficulty', value)}
-                placeholder="Ej: Principiante"
-              />
+            <View style={{ width: '48%' }}>
+              <Text style={{ fontSize: 16, fontWeight: '500', color: '#fff', marginBottom: 8 }}>Dificultad</Text>
+              <TextInput style={{ borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#222', color: '#fff', marginBottom: 16 }} value={form.difficulty} onChangeText={(value) => handleInputChange('difficulty', value)} placeholder="Ej: Principiante" placeholderTextColor="#888" />
             </View>
           </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Instrucciones</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={form.instructions}
-              onChangeText={(value) => handleInputChange('instructions', value)}
-              placeholder="Instrucciones paso a paso..."
-              multiline
-              numberOfLines={4}
-            />
-          </View>
+          <Text style={{ fontSize: 16, fontWeight: '500', color: '#fff', marginBottom: 8 }}>Instrucciones</Text>
+          <TextInput style={{ borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#222', color: '#fff', marginBottom: 16, height: 80, textAlignVertical: 'top' }} value={form.instructions} onChangeText={(value) => handleInputChange('instructions', value)} placeholder="Instrucciones paso a paso..." placeholderTextColor="#888" multiline numberOfLines={4} />
         </View>
-
         {/* Media */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Imagen o Video</Text>
@@ -348,29 +305,29 @@ const CreateExerciseScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000',
   },
   header: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#181818',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#333',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#ccc',
   },
   form: {
     padding: 20,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: '#181818',
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
@@ -383,7 +340,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#fff',
     marginBottom: 16,
   },
   inputContainer: {
@@ -392,20 +349,23 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: '#fff',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#333',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#222',
+    color: '#fff',
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
+    backgroundColor: '#222',
+    color: '#fff',
   },
   row: {
     flexDirection: 'row',
@@ -423,22 +383,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderStyle: 'dashed',
+    backgroundColor: '#222',
   },
   imageButton: {
     borderColor: '#4CAF50',
-    backgroundColor: '#E8F5E8',
+    backgroundColor: '#222',
   },
   videoButton: {
     borderColor: '#2196F3',
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#222',
   },
   mixedButton: {
     borderColor: '#FF9800',
-    backgroundColor: '#FFF3E0',
+    backgroundColor: '#222',
   },
   mediaButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#fff',
   },
   mediaPreview: {
     alignItems: 'center',
@@ -462,11 +424,11 @@ const styles = StyleSheet.create({
   mediaFileName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: '#fff',
   },
   mediaFileSize: {
     fontSize: 12,
-    color: '#666',
+    color: '#ccc',
   },
   removeMediaButton: {
     padding: 8,

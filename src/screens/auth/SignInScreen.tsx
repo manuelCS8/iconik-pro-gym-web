@@ -11,15 +11,14 @@ import {
   ScrollView,
   SafeAreaView,
 } from "react-native";
-import { useDispatch } from "react-redux";
-import { setUser } from "../../redux/slices/authSlice";
+import { useAuth } from "../../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
-import { COLORS, SIZES } from "../../utils/theme";
 import { Ionicons } from '@expo/vector-icons';
 import ArtisticBackground from "../../components/ArtisticBackground";
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const SignInScreen: React.FC = () => {
-  const dispatch = useDispatch();
+  const { signInWithEmail, signInWithGoogle } = useAuth();
   const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,55 +31,72 @@ const SignInScreen: React.FC = () => {
       return;
     }
 
+    if (!acceptTerms) {
+      Alert.alert("Error", "Debes aceptar los términos y condiciones.");
+      return;
+    }
+
     setIsLoading(true);
-    const emailTrimmed = email.trim().toLowerCase();
     
     try {
-      // ✅ 1. Verificar credenciales demo FIRST
-      if (emailTrimmed === "admin@iconik.com" && password === "admin123") {
-        console.log("✅ Login ADMIN demo exitoso");
-        dispatch(setUser({
-          uid: "admin-iconik-2024",
-          email: "admin@iconik.com",
-          role: "ADMIN",
-          membershipEnd: "2025-12-31",
-          name: "Administrador",
-          weight: 80,
-          height: 180,
-          age: 30,
-        }));
-        Alert.alert("✅ Bienvenido Admin", "Acceso a panel de administración");
-        setIsLoading(false);
-        return;
-      }
+      await signInWithEmail(email.trim().toLowerCase(), password);
+      Alert.alert("✅ Bienvenido", "Inicio de sesión exitoso");
+      // Si usas Redux o contexto para el rol, puedes condicionar aquí
+      // Alert.alert("✅ Bienvenido", "Inicio de sesión exitoso");
+    } catch (error: any) {
+      console.error('Error en sign-in:', error);
       
-      if (emailTrimmed === "member@iconik.com" && password === "member123") {
-        console.log("✅ Login MEMBER demo exitoso");
-        dispatch(setUser({
-          uid: "member-iconik-2024",
-          email: "member@iconik.com",
-          role: "MEMBER",
-          membershipEnd: "2024-12-31",
-          name: "Juan Pérez",
-          weight: 75,
-          height: 175,
-          age: 28,
-        }));
-        Alert.alert("✅ Bienvenido Juan", "¡Listo para entrenar!");
-        setIsLoading(false);
-        return;
+      let errorMessage = "Error al iniciar sesión";
+      if (error.message?.includes('no encontrado')) {
+        errorMessage = "Usuario no encontrado";
+      } else if (error.message?.includes('incorrecta')) {
+        errorMessage = "Contraseña incorrecta";
+      } else if (error.message?.includes('inválido')) {
+        errorMessage = "Email inválido";
+      } else if (error.message?.includes('demasiados intentos')) {
+        errorMessage = "Demasiados intentos fallidos. Intenta más tarde";
+      } else if (error.message?.includes('no autorizado')) {
+        errorMessage = "Usuario no autorizado o membresía vencida";
       }
-      // Si no es demo, muestra error
-      Alert.alert("Error", "Solo están habilitadas las credenciales demo.");
+
+      Alert.alert("Error", errorMessage);
+    } finally {
       setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      Alert.alert("Error", "Ocurrió un error inesperado.");
     }
   };
 
-  const onGoogleSignIn = () => {
-    Alert.alert("Google Sign-In", "Funcionalidad en desarrollo. Usa credenciales demo.");
+  const onGoogleSignIn = async () => {
+    if (!acceptTerms) {
+      Alert.alert("Error", "Debes aceptar los términos y condiciones.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Verificar que Google Play Services esté disponible
+      await GoogleSignin.hasPlayServices();
+      
+      // Iniciar el proceso de sign-in
+      const { idToken } = await GoogleSignin.signIn();
+      
+      // Iniciar sesión con Firebase
+      await signInWithGoogle(idToken);
+      Alert.alert("✅ Bienvenido", "Inicio de sesión con Google exitoso");
+      // Alert.alert("✅ Bienvenido", "Inicio de sesión con Google exitoso");
+    } catch (error: any) {
+      console.error('Error en Google Sign-In:', error);
+      
+      if (error.message?.includes('cancelado')) {
+        Alert.alert("Cancelado", "Inicio de sesión cancelado por el usuario");
+      } else if (error.message?.includes('no autorizado')) {
+        Alert.alert("Error", "Usuario no autorizado. Contacta al administrador.");
+      } else {
+        Alert.alert("Error", "Error al iniciar sesión con Google. Intenta de nuevo.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -108,7 +124,7 @@ const SignInScreen: React.FC = () => {
               <Text style={styles.inputLabel}>Correo electrónico</Text>
               <TextInput
                 style={styles.input}
-                placeholder="ejemplo@gmail.com"
+                placeholder="tu@email.com"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -122,7 +138,7 @@ const SignInScreen: React.FC = () => {
               <Text style={styles.inputLabel}>Contraseña</Text>
               <TextInput
                 style={styles.input}
-                placeholder="mínimo 6 caracteres"
+                placeholder="Tu contraseña"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -141,19 +157,19 @@ const SignInScreen: React.FC = () => {
                 {acceptTerms && <Ionicons name="checkmark" size={16} color="#fff" />}
               </View>
               <View style={styles.termsTextContainer}>
-                <Text style={styles.termsText}>Aceptar </Text>
+                <Text style={styles.termsText}>Acepto los </Text>
                 <TouchableOpacity 
                   onPress={() => navigation.navigate("Terms" as never)}
                   disabled={isLoading}
                 >
-                  <Text style={styles.termsLink}>términos y Condiciones</Text>
+                  <Text style={styles.termsLink}>términos y condiciones</Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
 
             {/* Google Sign In Button */}
             <TouchableOpacity 
-              style={styles.googleButton}
+              style={[styles.googleButton, isLoading && styles.disabledButton]}
               onPress={onGoogleSignIn}
               disabled={isLoading}
             >
@@ -161,7 +177,9 @@ const SignInScreen: React.FC = () => {
                 source={{uri: 'https://developers.google.com/identity/images/g-logo.png'}} 
                 style={styles.googleIcon}
               />
-              <Text style={styles.googleButtonText}>Iniciar Sesión Con Google</Text>
+              <Text style={styles.googleButtonText}>
+                {isLoading ? 'Iniciando...' : 'Iniciar Sesión Con Google'}
+              </Text>
             </TouchableOpacity>
 
             {/* Login Button */}
@@ -171,7 +189,7 @@ const SignInScreen: React.FC = () => {
               disabled={!acceptTerms || isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
               )}
@@ -187,13 +205,6 @@ const SignInScreen: React.FC = () => {
             >
               <Text style={styles.bottomLink}>Regístrate</Text>
             </TouchableOpacity>
-          </View>
-
-          {/* Admin Access Section */}
-          <View style={styles.adminSection}>
-            <Text style={styles.adminTitle}>🛠️ Acceso Administrador</Text>
-            <Text style={styles.adminInfo}>admin@iconik.com / admin123</Text>
-            <Text style={styles.memberInfo}>👤 Demo Miembro: member@iconik.com / member123</Text>
           </View>
         </View>
       </ScrollView>
@@ -213,32 +224,34 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 80,
-    paddingBottom: 60,
-    position: 'relative',
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   logo: {
     width: 250,
     height: 250,
-    marginBottom: 40,
+    marginBottom: 20,
     marginLeft: -30,
   },
-
   formContainer: {
     flex: 1,
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
   formCard: {
-    backgroundColor: '#333',
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 24,
-    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   formTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#333',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -246,19 +259,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 14,
-    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 8,
-    fontWeight: '500',
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: '#ddd',
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#f9f9f9',
   },
   termsContainer: {
     flexDirection: 'row',
@@ -271,7 +283,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: '#ddd',
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -288,13 +300,13 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 14,
-    color: '#fff',
+    color: '#666',
     lineHeight: 20,
   },
   termsLink: {
     fontSize: 14,
-    color: '#4285F4',
-    textDecorationLine: 'underline',
+    color: '#ff4444',
+    fontWeight: '600',
     lineHeight: 20,
   },
   googleButton: {
@@ -302,76 +314,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 12,
+    padding: 18,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   googleIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 12,
+    width: 24,
+    height: 24,
+    marginRight: 16,
   },
   googleButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
   },
   loginButton: {
     backgroundColor: '#ff4444',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 12,
+    padding: 18,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   loginButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
     color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
   disabledButton: {
-    backgroundColor: '#666',
-    opacity: 0.7,
+    opacity: 0.6,
   },
   bottomContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginTop: 24,
   },
   bottomText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
   },
   bottomLink: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#1a1a1a',
     fontWeight: '600',
-  },
-  adminSection: {
-    backgroundColor: 'rgba(255, 68, 68, 0.1)',
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 68, 68, 0.3)',
-  },
-  adminTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#ff4444',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  adminInfo: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 4,
-    fontFamily: 'monospace',
-  },
-  memberInfo: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'monospace',
   },
 });
 

@@ -20,13 +20,19 @@ export default function SignInScreen({ navigation }) {
       dispatch(setUser({
         uid: userId,
         email: userData.email,
-        role: userData.role,
+        role: userData.role?.toUpperCase(), // <-- Siempre mayúsculas
         membershipEnd: userData.membershipEnd || null,
         weight: userData.weight,
         height: userData.height,
         age: userData.age,
       }));
-      navigation.replace(userData.role === "ADMIN" ? "Dashboard" : "EntrenarTab");
+      const role = userData.role?.toUpperCase();
+      console.log("ROL DEL USUARIO:", role);
+      if (role === "ADMIN" || role === "MEMBER") {
+        navigation.replace(role === "ADMIN" ? "Dashboard" : "EntrenarTab");
+      } else {
+        Alert.alert("Error", "Rol de usuario no válido.");
+      }
     } catch (error: any) {
       Alert.alert("Error al iniciar sesión", error.message);
     }

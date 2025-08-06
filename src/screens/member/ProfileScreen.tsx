@@ -18,7 +18,9 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../redux/store";
 import { setUser } from "../../redux/slices/authSlice";
 import { logout } from "../../redux/slices/authSlice";
+import { useNavigation } from '@react-navigation/native';
 import WeightChart from "../../components/WeightChart";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 // import { VictoryChart, VictoryBar, VictoryAxis } from "victory-native";
 
 const windowWidth = Dimensions.get("window").width;
@@ -36,7 +38,23 @@ interface UserProfile {
 
 const ProfileScreen: React.FC = () => {
   const dispatch = useDispatch();
+  const navigation = useNavigation();
   const { uid, email, user, role } = useSelector((state: RootState) => state.auth);
+  const insets = useSafeAreaInsets();
+
+  // Función para generar nombre de usuario basado en el correo
+  const generateUsername = (email: string) => {
+    if (!email) return "usuario";
+    const username = email.split('@')[0];
+    // Limpiar caracteres especiales y agregar números si es necesario
+    const cleanUsername = username.replace(/[^a-zA-Z0-9]/g, '');
+    // Usar un hash simple basado en el email para consistencia
+    const hash = email.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return cleanUsername + '_' + Math.abs(hash % 100);
+  };
 
   // Estados para el perfil
   const [profile, setProfile] = useState<UserProfile>({
@@ -154,22 +172,23 @@ const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => setShowEditModal(true)}>
           <Text style={styles.editButton}>Editar</Text>
           <Text style={styles.editButton}>Perfil</Text>
         </TouchableOpacity>
         
-        <Text style={styles.username}>emmanuel_88</Text>
+        <Text style={styles.username}>{generateUsername(email || '')}</Text>
         
         <TouchableOpacity onPress={() => setShowSettingsModal(true)}>
           <Ionicons name="settings-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      {/* Forzar que el ScrollView no tenga espacio extra al final */}
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 0, flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         {/* Profile Info */}
         <View style={styles.profileSection}>
           <Image 
@@ -196,43 +215,6 @@ const ProfileScreen: React.FC = () => {
           <Text style={styles.bio}>{profile.bio}</Text>
         </View>
 
-        {/* Training Chart */}
-        <View style={styles.chartSection}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>0 horas esta semana</Text>
-            <Text style={styles.chartPeriod}>Últimos 3 meses ▼</Text>
-          </View>
-          
-          <View style={styles.chartContainer}>
-            <View style={styles.simpleChart}>
-              {trainingData.map((item, index) => (
-                <View key={index} style={styles.chartBarContainer}>
-                  <View 
-                    style={[
-                      styles.chartBar, 
-                      { height: (item.hours / 8) * 120 }
-                    ]} 
-                  />
-                  <Text style={styles.chartLabel}>{item.month.slice(-2)}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Chart Filters */}
-          <View style={styles.chartFilters}>
-            <TouchableOpacity style={[styles.filterButton, styles.activeFilter]}>
-              <Text style={[styles.filterText, styles.activeFilterText]}>Duración</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.filterButton}>
-              <Text style={styles.filterText}>Volumen</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.filterButton}>
-              <Text style={styles.filterText}>Repeticiones</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Action Buttons */}
         <View style={styles.actionSection}>
           <Text style={styles.sectionTitle}>Información</Text>
@@ -246,7 +228,15 @@ const ProfileScreen: React.FC = () => {
                <Text style={styles.actionText}>Estadísticas</Text>
              </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => {
+                // Navegar al tab de Entrenar y luego a la pantalla de ejercicios
+                navigation.navigate('EntrenarTab' as never, {
+                  screen: 'ExercisesList'
+                } as never);
+              }}
+            >
               <Ionicons name="barbell-outline" size={24} color="#fff" />
               <Text style={styles.actionText}>Ejercicios</Text>
             </TouchableOpacity>
@@ -560,7 +550,7 @@ const styles = StyleSheet.create({
      justifyContent: 'space-between',
      alignItems: 'center',
      paddingHorizontal: 16,
-     paddingVertical: 20,
+     paddingVertical: 20, // Volver al valor original
      backgroundColor: '#000',
      marginTop: 10,
    },
@@ -618,76 +608,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  chartSection: {
-    paddingHorizontal: 16,
-    marginVertical: 20,
-  },
-  chartHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  chartTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  chartPeriod: {
-    color: '#4A90E2',
-    fontSize: 14,
-  },
-     chartContainer: {
-     backgroundColor: '#111',
-     borderRadius: 8,
-     marginBottom: 16,
-     padding: 16,
-     height: 160,
-   },
-   simpleChart: {
-     flexDirection: 'row',
-     justifyContent: 'space-between',
-     alignItems: 'flex-end',
-     height: 120,
-     paddingHorizontal: 8,
-   },
-   chartBarContainer: {
-     alignItems: 'center',
-     flex: 1,
-     marginHorizontal: 2,
-   },
-   chartBar: {
-     backgroundColor: '#ff4444',
-     width: 20,
-     borderRadius: 4,
-     marginBottom: 8,
-     minHeight: 10,
-   },
-   chartLabel: {
-     color: '#888',
-     fontSize: 10,
-     transform: [{ rotate: '-45deg' }],
-   },
-  chartFilters: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  filterButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#333',
-  },
-  activeFilter: {
-    backgroundColor: '#ff4444',
-  },
-  filterText: {
-    color: '#888',
-    fontSize: 14,
-  },
-  activeFilterText: {
-    color: '#fff',
   },
   actionSection: {
     paddingHorizontal: 16,

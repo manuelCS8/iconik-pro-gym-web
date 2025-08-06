@@ -11,15 +11,13 @@ import {
   ScrollView,
   SafeAreaView,
 } from "react-native";
-import { useDispatch } from "react-redux";
-import { setUser } from "../../redux/slices/authSlice";
+import { useAuth } from "../../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
-import { COLORS, SIZES } from "../../utils/theme";
 import { Ionicons } from '@expo/vector-icons';
 import ArtisticBackground from "../../components/ArtisticBackground";
 
 const EmailSignUpScreen: React.FC = () => {
-  const dispatch = useDispatch();
+  const { signUpWithEmail } = useAuth();
   const navigation = useNavigation();
   const [formData, setFormData] = useState({
     name: "",
@@ -88,51 +86,8 @@ const EmailSignUpScreen: React.FC = () => {
     try {
       const { name, email, password, age, weight, height } = formData;
 
-      // 1. Crear usuario en Firebase Auth
-      console.log("🔥 Creando usuario en Firebase Auth...");
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        email.trim().toLowerCase(), 
-        password
-      );
-
-      const user = userCredential.user;
-      console.log("✅ Usuario creado en Auth:", email);
-
-      // 2. Calcular fecha de fin de membresía (30 días desde hoy)
-      const membershipStart = new Date().toISOString();
-      const membershipEndDate = new Date();
-      membershipEndDate.setDate(membershipEndDate.getDate() + 30);
-      const membershipEnd = membershipEndDate.toISOString();
-
-      // 3. Guardar datos del usuario en Firestore
-      console.log("💾 Guardando datos en Firestore...");
-      const userData = {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        role: "MEMBER", // Todos los nuevos usuarios son miembros por defecto
-        membershipStart,
-        membershipEnd,
-        age: parseInt(age),
-        weight: weight ? parseFloat(weight) : null,
-        height: height ? parseFloat(height) : null,
-        createdAt: new Date().toISOString(),
-      };
-
-      await setDoc(doc(firestore, "users", user.uid), userData);
-      console.log("✅ Datos guardados en Firestore");
-
-      // 4. Actualizar Redux store
-      dispatch(setUser({
-        uid: user.uid,
-        email: email.trim().toLowerCase(),
-        role: "MEMBER",
-        membershipEnd,
-        name: name.trim(),
-        weight: weight ? parseFloat(weight) : undefined,
-        height: height ? parseFloat(height) : undefined,
-        age: parseInt(age),
-      }));
+      // Registrar usuario con Firebase
+      await signUpWithEmail(email.trim().toLowerCase(), password, name.trim());
 
       Alert.alert(
         "✅ ¡Registro exitoso!",
@@ -158,6 +113,8 @@ const EmailSignUpScreen: React.FC = () => {
         errorMessage = "Formato de correo inválido.";
       } else if (error.code === 'auth/operation-not-allowed') {
         errorMessage = "El registro con email/contraseña no está habilitado.";
+      } else if (error.message?.includes('no autorizado')) {
+        errorMessage = "Usuario no autorizado. Contacta al administrador.";
       }
 
       Alert.alert("Error de registro", errorMessage);
@@ -204,7 +161,7 @@ const EmailSignUpScreen: React.FC = () => {
               <Text style={styles.inputLabel}>Correo electrónico *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="ejemplo@gmail.com"
+                placeholder="tu@email.com"
                 value={formData.email}
                 onChangeText={(value) => updateFormData('email', value)}
                 keyboardType="email-address"
@@ -247,7 +204,7 @@ const EmailSignUpScreen: React.FC = () => {
               <Text style={styles.inputLabel}>Edad *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Años"
+                placeholder="Tu edad"
                 value={formData.age}
                 onChangeText={(value) => updateFormData('age', value)}
                 keyboardType="numeric"
@@ -256,79 +213,62 @@ const EmailSignUpScreen: React.FC = () => {
               />
             </View>
 
-            {/* Datos opcionales */}
-            <Text style={styles.sectionTitle}>Datos Opcionales (para seguimiento)</Text>
-
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, styles.halfInput]}>
-                <Text style={styles.inputLabel}>Peso (kg)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Kg"
-                  value={formData.weight}
-                  onChangeText={(value) => updateFormData('weight', value)}
-                  keyboardType="numeric"
-                  placeholderTextColor="#999"
-                  editable={!isLoading}
-                />
-              </View>
-
-              <View style={[styles.inputContainer, styles.halfInput]}>
-                <Text style={styles.inputLabel}>Altura (cm)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Cm"
-                  value={formData.height}
-                  onChangeText={(value) => updateFormData('height', value)}
-                  keyboardType="numeric"
-                  placeholderTextColor="#999"
-                  editable={!isLoading}
-                />
-              </View>
+            {/* Peso (opcional) */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Peso (kg) - Opcional</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Tu peso en kg"
+                value={formData.weight}
+                onChangeText={(value) => updateFormData('weight', value)}
+                keyboardType="numeric"
+                placeholderTextColor="#999"
+                editable={!isLoading}
+              />
             </View>
 
-            {/* Terms and Conditions */}
-            <TouchableOpacity 
-              style={styles.termsContainer}
-              onPress={() => setAcceptTerms(!acceptTerms)}
-              disabled={isLoading}
-            >
-              <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
-                {acceptTerms && <Ionicons name="checkmark" size={16} color="#fff" />}
-              </View>
-              <View style={styles.termsTextContainer}>
-                <Text style={styles.termsText}>Acepto los </Text>
-                <TouchableOpacity 
-                  onPress={() => navigation.navigate("Terms" as never)}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.termsLink}>términos y condiciones</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
+            {/* Altura (opcional) */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Altura (cm) - Opcional</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Tu altura en cm"
+                value={formData.height}
+                onChangeText={(value) => updateFormData('height', value)}
+                keyboardType="numeric"
+                placeholderTextColor="#999"
+                editable={!isLoading}
+              />
+            </View>
 
-            {/* Register Button */}
-            <TouchableOpacity 
-              style={[styles.registerButton, (!acceptTerms || isLoading) && styles.disabledButton]}
+            {/* Términos y condiciones */}
+            <View style={styles.termsContainer}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => setAcceptTerms(!acceptTerms)}
+                disabled={isLoading}
+              >
+                <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+                  {acceptTerms && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <Text style={styles.termsText}>
+                  Acepto los{" "}
+                  <Text style={styles.termsLink}>términos y condiciones</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Botón de registro */}
+            <TouchableOpacity
+              style={[styles.signUpButton, isLoading && styles.disabledButton]}
               onPress={onSignUpPressed}
-              disabled={!acceptTerms || isLoading}
+              disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.registerButtonText}>Crear Cuenta</Text>
+                <Text style={styles.signUpButtonText}>Crear Cuenta</Text>
               )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Bottom Link */}
-          <View style={styles.bottomContainer}>
-            <Text style={styles.bottomText}>¿Ya tienes cuenta? </Text>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate("SignIn" as never)}
-              disabled={isLoading}
-            >
-              <Text style={styles.bottomLink}>Inicia Sesión</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -348,126 +288,99 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
   backButton: {
-    marginRight: 16,
+    padding: 8,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
+    marginLeft: 10,
   },
   formContainer: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
   formCard: {
-    backgroundColor: '#333',
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 24,
-    marginBottom: 20,
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   inputContainer: {
     marginBottom: 20,
   },
-  halfInput: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    marginHorizontal: -4,
-  },
   inputLabel: {
-    fontSize: 14,
-    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 8,
-    fontWeight: '500',
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: '#ddd',
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#ff4444',
-    marginBottom: 16,
-    textAlign: 'center',
+    backgroundColor: '#f9f9f9',
   },
   termsContainer: {
+    marginBottom: 24,
+  },
+  checkboxContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-    paddingRight: 10,
+    alignItems: 'center',
   },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: '#ddd',
+    borderRadius: 4,
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
   },
   checkboxChecked: {
     backgroundColor: '#ff4444',
     borderColor: '#ff4444',
   },
-  termsTextContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
   termsText: {
     fontSize: 14,
-    color: '#fff',
-    lineHeight: 20,
+    color: '#666',
+    flex: 1,
   },
   termsLink: {
-    fontSize: 14,
-    color: '#4285F4',
-    textDecorationLine: 'underline',
-    lineHeight: 20,
+    color: '#ff4444',
+    fontWeight: '600',
   },
-  registerButton: {
+  signUpButton: {
     backgroundColor: '#ff4444',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 12,
+    padding: 18,
     alignItems: 'center',
-  },
-  registerButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   disabledButton: {
-    backgroundColor: '#666',
-    opacity: 0.7,
+    opacity: 0.6,
   },
-  bottomContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bottomText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  bottomLink: {
-    fontSize: 14,
-    color: '#1a1a1a',
+  signUpButtonText: {
+    color: '#fff',
+    fontSize: 18,
     fontWeight: '600',
   },
 });

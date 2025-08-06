@@ -17,36 +17,52 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { COLORS, SIZES } from '../../utils/theme';
 import RoleGuard from '../../components/RoleGuard';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { useNavigation } from '@react-navigation/native';
+import { uploadFile, generateStoragePath, validateFile } from '../../services/storage';
 
 interface Exercise {
   id: string;
   name: string;
-  primaryMuscle: string;
+  primaryMuscleGroups: string[]; // Grupos musculares principales (1-3)
+  secondaryMuscleGroups: string[]; // Grupos musculares secundarios (1-3)
   equipment: string;
   difficulty: 'Principiante' | 'Intermedio' | 'Avanzado';
-  instructions: string;
+  description: string; // Descripción corta del ejercicio
+  instructions: string; // Instrucciones paso a paso
   tips?: string;
-  thumbnailUrl?: string;
-  videoUrl?: string;
-  createdAt: Date;
-  isActive: boolean;
+  mediaType?: string;
+  mediaURL?: string;
+  imageURL?: string; // Campo para URLs públicas de imágenes
+  thumbnailURL?: string; // Nuevo campo para thumbnails
+  createdAt: any; // Firestore Timestamp
+  updatedAt?: any;
+  createdBy?: string;
+  isActive?: boolean;
 }
 
 interface NewExerciseForm {
   name: string;
-  primaryMuscle: string;
+  primaryMuscleGroups: string[];
+  secondaryMuscleGroups: string[];
   equipment: string;
   difficulty: 'Principiante' | 'Intermedio' | 'Avanzado';
+  description: string;
   instructions: string;
   tips: string;
 }
 
 const ManageExercisesScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
   const [searchText, setSearchText] = useState('');
   const [filterMuscle, setFilterMuscle] = useState<string>('All');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('All');
+  const [filterEquipment, setFilterEquipment] = useState<string>('All');
+  // Ordenamiento automático alfabético
+  const sortOrder = 'name';
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -55,24 +71,32 @@ const ManageExercisesScreen: React.FC = () => {
   
   const [newExercise, setNewExercise] = useState<NewExerciseForm>({
     name: '',
-    primaryMuscle: '',
+    primaryMuscleGroups: [],
+    secondaryMuscleGroups: [],
     equipment: '',
     difficulty: 'Principiante',
+    description: '',
     instructions: '',
     tips: '',
   });
   
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [selectedVideo, setSelectedVideo] = useState<{ uri: string; name: string }>({ uri: '', name: '' });
+  const [selectedThumbnail, setSelectedThumbnail] = useState<string>('');
 
   // Opciones para dropdowns
   const muscleGroups = [
     'Pecho', 'Espalda', 'Piernas', 'Hombros', 'Brazos', 'Core', 
-    'Glúteos', 'Pantorrillas', 'Cardio', 'Funcional'
+    'Glúteos', 'Pantorrillas', 'Cardio', 'Funcional',
+    // Agregando grupos musculares adicionales basados en la imagen
+    'Abdominales', 'Abductores', 'Antebrazos', 'Bíceps', 'Cuádriceps', 
+    'Dorsales', 'Isquiotibiales', 'Lumbares', 'Trapecios', 'Tríceps'
   ];
 
   const equipmentOptions = [
-    'Peso libre', 'Máquina', 'Calistenia', 'Cardio', 'Cable', 'Funcional'
+    'Peso libre', 'Máquina', 'Calistenia', 'Cardio', 'Cable', 'Funcional',
+    'Barra', 'Mancuernas', 'Disco', 'Bandas de resistencia', 'Peso rusa', 
+    'Barra Z', 'Banda suspendida', 'Ninguno', 'Poleas'
   ];
 
   const difficultyLevels: Array<'Principiante' | 'Intermedio' | 'Avanzado'> = [
@@ -85,74 +109,45 @@ const ManageExercisesScreen: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [exercises, searchText, filterMuscle, filterDifficulty]);
+  }, [exercises, searchText, filterMuscle, filterDifficulty, filterEquipment]);
 
   const loadExercises = async () => {
     try {
       setIsLoading(true);
       
-      // Simular ejercicios (en producción vendría de Firestore)
-      const mockExercises: Exercise[] = [
-        {
-          id: "ex1",
-          name: "Press Pecho Vertical",
-          primaryMuscle: "Pecho",
-          equipment: "Máquina",
-          difficulty: "Principiante",
-          instructions: "1. Ajusta el asiento a la altura adecuada\n2. Agarra las manijas con las palmas hacia adelante\n3. Empuja hacia adelante manteniendo la espalda recta\n4. Regresa lentamente a la posición inicial",
-          tips: "Mantén los codos ligeramente flexionados. No uses momentum.",
-          thumbnailUrl: "https://mock-url.com/press-pecho.jpg",
-          videoUrl: "https://mock-url.com/press-pecho.mp4",
-          createdAt: new Date("2024-01-15"),
-          isActive: true, 
-        },
-        {
-          id: "ex2",
-          name: "Sentadilla Profunda",
-          primaryMuscle: "Piernas",
-          equipment: "Peso libre",
-          difficulty: "Intermedio",
-          instructions: "1. Colócate con los pies separados al ancho de los hombros\n2. Baja como si fueras a sentarte manteniendo el pecho arriba\n3. Desciende hasta que los muslos estén paralelos al suelo\n4. Empuja a través de los talones para volver arriba",
-          tips: "Mantén las rodillas alineadas con los pies. No dejes que se vayan hacia adentro.",
-          thumbnailUrl: "https://mock-url.com/sentadilla.jpg",
-          videoUrl: "https://mock-url.com/sentadilla.mp4",
-          createdAt: new Date("2024-02-01"),
-          isActive: true,
-        },
-        {
-          id: "ex3",
-          name: "Peso Muerto",
-          primaryMuscle: "Espalda",
-          equipment: "Peso libre",
-          difficulty: "Avanzado",
-          instructions: "1. Párate con los pies separados al ancho de caderas\n2. Agarra la barra con las manos fuera de las piernas\n3. Mantén la espalda recta y levanta usando piernas y caderas\n4. Termina de pie con los hombros hacia atrás",
-          tips: "La barra debe mantenerse cerca del cuerpo durante todo el movimiento.",
-          thumbnailUrl: "https://mock-url.com/peso-muerto.jpg",
-          videoUrl: "https://mock-url.com/peso-muerto.mp4",
-          createdAt: new Date("2024-03-01"),
-          isActive: false, // Ejemplo de ejercicio desactivado
-        },
-        {
-          id: "ex4",
-          name: "Curl de Bíceps",
-          primaryMuscle: "Brazos",
-          equipment: "Peso libre",
-          difficulty: "Principiante",
-          instructions: "1. Mantén los pies separados al ancho de hombros\n2. Agarra las mancuernas con las palmas hacia adelante\n3. Flexiona los codos llevando las pesas hacia los hombros\n4. Baja controladamente a la posición inicial",
-          tips: "Evita balancear el cuerpo. Solo se mueven los antebrazos.",
-          thumbnailUrl: "https://mock-url.com/curl-biceps.jpg",
-          videoUrl: "https://mock-url.com/curl-biceps.mp4",
-          createdAt: new Date("2024-04-01"),
-          isActive: true,
-        },
-      ];
+      // Cargar ejercicios reales de Firestore
+      const exercisesRef = collection(db, 'exercises');
+      const snapshot = await getDocs(exercisesRef);
+      
+      const exercisesFromFirestore: Exercise[] = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          name: data.name || '',
+          primaryMuscleGroups: data.primaryMuscleGroups || (data.muscleGroup ? [data.muscleGroup] : []),
+          secondaryMuscleGroups: data.secondaryMuscleGroups || [],
+          equipment: data.equipment || '',
+          difficulty: data.difficulty || 'Principiante',
+          description: data.description || '',
+          instructions: data.instructions || '',
+          tips: data.tips || '',
+          mediaType: data.mediaType || '',
+          mediaURL: data.mediaURL || '',
+          imageURL: data.imageURL || '',
+          thumbnailURL: data.thumbnailURL || '',
+          createdAt: data.createdAt || new Date(),
+          updatedAt: data.updatedAt,
+          createdBy: data.createdBy || '',
+          isActive: data.isActive !== false, // Por defecto true si no está definido
+        };
+      });
 
-      setExercises(mockExercises);
-      console.log(`✅ Cargados ${mockExercises.length} ejercicios`);
+      setExercises(exercisesFromFirestore);
+      console.log(`✅ Cargados ${exercisesFromFirestore.length} ejercicios desde Firestore`);
 
     } catch (error) {
       console.error("Error loading exercises:", error);
-      Alert.alert("Error", "No se pudieron cargar los ejercicios");
+      Alert.alert("Error", "No se pudieron cargar los ejercicios desde Firestore");
     } finally {
       setIsLoading(false);
     }
@@ -166,20 +161,32 @@ const ManageExercisesScreen: React.FC = () => {
       const search = searchText.toLowerCase();
       filtered = filtered.filter(exercise =>
         exercise.name.toLowerCase().includes(search) ||
-        exercise.primaryMuscle.toLowerCase().includes(search) ||
+        exercise.primaryMuscleGroups.some(muscle => muscle.toLowerCase().includes(search)) ||
+        exercise.secondaryMuscleGroups.some(muscle => muscle.toLowerCase().includes(search)) ||
         exercise.equipment.toLowerCase().includes(search)
       );
     }
 
     // Filtro por grupo muscular
     if (filterMuscle !== 'All') {
-      filtered = filtered.filter(exercise => exercise.primaryMuscle === filterMuscle);
+      filtered = filtered.filter(exercise => 
+        exercise.primaryMuscleGroups.includes(filterMuscle) || 
+        exercise.secondaryMuscleGroups.includes(filterMuscle)
+      );
     }
 
     // Filtro por dificultad
     if (filterDifficulty !== 'All') {
       filtered = filtered.filter(exercise => exercise.difficulty === filterDifficulty);
     }
+
+    // Filtro por tipo de equipo
+    if (filterEquipment !== 'All') {
+      filtered = filtered.filter(exercise => exercise.equipment === filterEquipment);
+    }
+
+    // Ordenamiento alfabético automático
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
 
     setFilteredExercises(filtered);
   };
@@ -188,7 +195,7 @@ const ManageExercisesScreen: React.FC = () => {
     switch (difficulty) {
       case 'Principiante': return COLORS.success;
       case 'Intermedio': return COLORS.warning;
-      case 'Avanzado': return COLORS.error;
+      case 'Avanzado': return COLORS.danger;
       default: return COLORS.gray;
     }
   };
@@ -252,31 +259,124 @@ const ManageExercisesScreen: React.FC = () => {
     }
   };
 
+  const pickThumbnail = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedThumbnail(result.assets[0].uri);
+        console.log('Thumbnail seleccionado');
+      }
+    } catch (error) {
+      console.error('Error picking thumbnail:', error);
+      Alert.alert("Error", "No se pudo seleccionar el thumbnail");
+    }
+  };
+
   const handleCreateExercise = async () => {
     try {
-      if (!newExercise.name.trim() || !newExercise.primaryMuscle || !newExercise.equipment || !newExercise.instructions.trim()) {
+      if (!newExercise.name.trim() || newExercise.primaryMuscleGroups.length === 0 || !newExercise.equipment || !newExercise.description.trim() || !newExercise.instructions.trim()) {
         Alert.alert("Error", "Por favor completa todos los campos obligatorios");
         return;
       }
 
       setIsUploading(true);
 
-      // En modo mock, simular URLs
-      const thumbnailUrl = selectedImage ? `https://mock-storage.com/thumbnails/${Date.now()}.jpg` : undefined;
-      const videoUrl = selectedVideo.uri ? `https://mock-storage.com/videos/${Date.now()}.mp4` : undefined;
+      // Variables para URLs de archivos subidos
+      let mediaURL = '';
+      let thumbnailURL = '';
+      let imageURL = '';
 
-      const newExerciseData: Exercise = {
-        id: `exercise-${Date.now()}`,
+      // Subir video si existe
+      if (selectedVideo.uri) {
+        try {
+          const videoFileName = selectedVideo.name || `video_${Date.now()}.mp4`;
+          const videoPath = generateStoragePath(videoFileName, 'exercises/videos');
+          
+          const videoResult = await uploadFile(selectedVideo.uri, videoPath, (progress) => {
+            console.log(`Subiendo video: ${progress.percent.toFixed(1)}%`);
+          });
+          
+          mediaURL = videoResult.url;
+          console.log("✅ Video subido a Firebase Storage:", mediaURL);
+        } catch (error) {
+          console.error("Error subiendo video:", error);
+          Alert.alert("Error", "No se pudo subir el video a Firebase Storage");
+          return;
+        }
+      }
+
+      // Subir imagen si existe
+      if (selectedImage) {
+        try {
+          const imageFileName = `image_${Date.now()}.jpg`;
+          const imagePath = generateStoragePath(imageFileName, 'exercises/images');
+          
+          const imageResult = await uploadFile(selectedImage, imagePath, (progress) => {
+            console.log(`Subiendo imagen: ${progress.percent.toFixed(1)}%`);
+          });
+          
+          mediaURL = imageResult.url;
+          imageURL = imageResult.url; // También guardar en imageURL para compatibilidad
+          console.log("✅ Imagen subida a Firebase Storage:", mediaURL);
+        } catch (error) {
+          console.error("Error subiendo imagen:", error);
+          Alert.alert("Error", "No se pudo subir la imagen a Firebase Storage");
+          return;
+        }
+      }
+
+      // Subir thumbnail si existe
+      if (selectedThumbnail) {
+        try {
+          const thumbnailFileName = `thumbnail_${Date.now()}.jpg`;
+          const thumbnailPath = generateStoragePath(thumbnailFileName, 'exercises/thumbnails');
+          
+          const thumbnailResult = await uploadFile(selectedThumbnail, thumbnailPath, (progress) => {
+            console.log(`Subiendo thumbnail: ${progress.percent.toFixed(1)}%`);
+          });
+          
+          thumbnailURL = thumbnailResult.url;
+          console.log("✅ Thumbnail subido a Firebase Storage:", thumbnailURL);
+        } catch (error) {
+          console.error("Error subiendo thumbnail:", error);
+          Alert.alert("Error", "No se pudo subir el thumbnail a Firebase Storage");
+          return;
+        }
+      }
+
+      // Crear ejercicio en Firestore con URLs públicas
+      const exerciseData = {
         name: newExercise.name.trim(),
-        primaryMuscle: newExercise.primaryMuscle,
+        primaryMuscleGroups: newExercise.primaryMuscleGroups,
+        secondaryMuscleGroups: newExercise.secondaryMuscleGroups,
         equipment: newExercise.equipment,
         difficulty: newExercise.difficulty,
+        description: newExercise.description.trim(),
         instructions: newExercise.instructions.trim(),
-        tips: newExercise.tips.trim() || undefined,
-        thumbnailUrl,
-        videoUrl,
-        createdAt: new Date(),
+        tips: newExercise.tips.trim() || '',
+        mediaType: selectedVideo.uri ? 'video' : selectedImage ? 'image' : '',
+        mediaURL: mediaURL, // URL pública de Firebase Storage
+        imageURL: imageURL, // URL pública de imagen para compatibilidad
+        thumbnailURL: thumbnailURL, // URL pública de Firebase Storage
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdBy: 'admin', // TODO: Obtener el UID del admin actual
         isActive: true,
+      };
+
+      const docRef = await addDoc(collection(db, 'exercises'), exerciseData);
+      
+      // Agregar a la lista local con el ID generado
+      const newExerciseData: Exercise = {
+        id: docRef.id,
+        ...exerciseData,
+        createdAt: new Date(),
       };
 
       setExercises(prev => [...prev, newExerciseData]);
@@ -285,12 +385,12 @@ const ManageExercisesScreen: React.FC = () => {
       resetForm();
       setShowCreateModal(false);
 
-      Alert.alert("Éxito", `Ejercicio "${newExerciseData.name}" creado correctamente`);
-      console.log("✅ Nuevo ejercicio creado:", newExerciseData.name);
+      Alert.alert("Éxito", `Ejercicio "${newExerciseData.name}" creado correctamente con media subido a Firebase Storage`);
+      console.log("✅ Nuevo ejercicio creado en Firestore con URLs públicas:", newExerciseData.name);
 
     } catch (error) {
       console.error("Error creating exercise:", error);
-      Alert.alert("Error", "No se pudo crear el ejercicio");
+      Alert.alert("Error", "No se pudo crear el ejercicio en Firestore");
     } finally {
       setIsUploading(false);
     }
@@ -302,19 +402,32 @@ const ManageExercisesScreen: React.FC = () => {
     try {
       setIsUploading(true);
 
+      // Actualizar en Firestore
+      const exerciseRef = doc(db, 'exercises', editingExercise.id);
+      const updateData = {
+        name: newExercise.name.trim(),
+        primaryMuscleGroups: newExercise.primaryMuscleGroups,
+        secondaryMuscleGroups: newExercise.secondaryMuscleGroups,
+        equipment: newExercise.equipment,
+        difficulty: newExercise.difficulty,
+        description: newExercise.description.trim(),
+        instructions: newExercise.instructions.trim(),
+        tips: newExercise.tips.trim() || '',
+        updatedAt: serverTimestamp(),
+        // Solo actualizar media si se seleccionaron nuevos archivos
+        ...(selectedImage && { mediaType: 'image', mediaURL: selectedImage }),
+        ...(selectedVideo.uri && { mediaType: 'video', mediaURL: selectedVideo.uri }),
+      };
+
+      await updateDoc(exerciseRef, updateData);
+
+      // Actualizar lista local
       const updatedExercises = exercises.map(exercise =>
         exercise.id === editingExercise.id
           ? {
               ...exercise,
-              name: newExercise.name.trim(),
-              primaryMuscle: newExercise.primaryMuscle,
-              equipment: newExercise.equipment,
-              difficulty: newExercise.difficulty,
-              instructions: newExercise.instructions.trim(),
-              tips: newExercise.tips.trim() || undefined,
-              // Solo actualizar URLs si se seleccionaron nuevos archivos
-              thumbnailUrl: selectedImage ? `https://mock-storage.com/thumbnails/${Date.now()}.jpg` : exercise.thumbnailUrl,
-              videoUrl: selectedVideo.uri ? `https://mock-storage.com/videos/${Date.now()}.mp4` : exercise.videoUrl,
+              ...updateData,
+              updatedAt: new Date(),
             }
           : exercise
       );
@@ -324,12 +437,12 @@ const ManageExercisesScreen: React.FC = () => {
       resetForm();
       setShowCreateModal(false);
 
-      Alert.alert("Éxito", "Ejercicio actualizado correctamente");
-      console.log("✅ Ejercicio actualizado:", newExercise.name);
+      Alert.alert("Éxito", "Ejercicio actualizado correctamente en Firestore");
+      console.log("✅ Ejercicio actualizado en Firestore:", newExercise.name);
 
     } catch (error) {
       console.error("Error updating exercise:", error);
-      Alert.alert("Error", "No se pudo actualizar el ejercicio");
+      Alert.alert("Error", "No se pudo actualizar el ejercicio en Firestore");
     } finally {
       setIsUploading(false);
     }
@@ -339,9 +452,11 @@ const ManageExercisesScreen: React.FC = () => {
     setEditingExercise(exercise);
     setNewExercise({
       name: exercise.name,
-      primaryMuscle: exercise.primaryMuscle,
+      primaryMuscleGroups: exercise.primaryMuscleGroups,
+      secondaryMuscleGroups: exercise.secondaryMuscleGroups,
       equipment: exercise.equipment,
       difficulty: exercise.difficulty,
+      description: exercise.description,
       instructions: exercise.instructions,
       tips: exercise.tips || '',
     });
@@ -359,41 +474,67 @@ const ManageExercisesScreen: React.FC = () => {
         {
           text: "Eliminar",
           style: "destructive",
-          onPress: () => {
-            setExercises(prev => prev.filter(ex => ex.id !== exercise.id));
-            Alert.alert("Éxito", `El ejercicio "${exercise.name}" ha sido eliminado`);
-            console.log("❌ Ejercicio eliminado:", exercise.name);
+          onPress: async () => {
+            try {
+              // Eliminar de Firestore
+              await deleteDoc(doc(db, 'exercises', exercise.id));
+              
+              // Eliminar de lista local
+              setExercises(prev => prev.filter(ex => ex.id !== exercise.id));
+              Alert.alert("Éxito", `El ejercicio "${exercise.name}" ha sido eliminado de Firestore`);
+              console.log("❌ Ejercicio eliminado de Firestore:", exercise.name);
+            } catch (error) {
+              console.error("Error deleting exercise:", error);
+              Alert.alert("Error", "No se pudo eliminar el ejercicio de Firestore");
+            }
           }
         }
       ]
     );
   };
 
-  const handleToggleActive = (exercise: Exercise) => {
-    const newStatus = !exercise.isActive;
-    const updatedExercises = exercises.map(ex =>
-      ex.id === exercise.id ? { ...ex, isActive: newStatus } : ex
-    );
-    setExercises(updatedExercises);
-    
-    Alert.alert(
-      "Éxito",
-      `Ejercicio "${exercise.name}" ${newStatus ? 'activado' : 'desactivado'}`
-    );
-    console.log(`🔄 Ejercicio ${newStatus ? 'activado' : 'desactivado'}:`, exercise.name);
+  const handleToggleActive = async (exercise: Exercise) => {
+    try {
+      const newStatus = !exercise.isActive;
+      
+      // Actualizar en Firestore
+      const exerciseRef = doc(db, 'exercises', exercise.id);
+      await updateDoc(exerciseRef, { 
+        isActive: newStatus,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Actualizar lista local
+      const updatedExercises = exercises.map(ex =>
+        ex.id === exercise.id ? { ...ex, isActive: newStatus } : ex
+      );
+      setExercises(updatedExercises);
+      
+      Alert.alert(
+        "Éxito",
+        `Ejercicio "${exercise.name}" ${newStatus ? 'activado' : 'desactivado'} en Firestore`
+      );
+      console.log(`🔄 Ejercicio ${newStatus ? 'activado' : 'desactivado'} en Firestore:`, exercise.name);
+    } catch (error) {
+      console.error("Error toggling exercise status:", error);
+      Alert.alert("Error", "No se pudo cambiar el estado del ejercicio");
+    }
   };
 
   const resetForm = () => {
     setNewExercise({
       name: '',
-      primaryMuscle: '',
+      primaryMuscleGroups: [],
+      secondaryMuscleGroups: [],
       equipment: '',
       difficulty: 'Principiante',
+      description: '',
       instructions: '',
       tips: '',
     });
     setSelectedImage('');
     setSelectedVideo({ uri: '', name: '' });
+    setSelectedThumbnail('');
     setEditingExercise(null);
   };
 
@@ -403,17 +544,48 @@ const ManageExercisesScreen: React.FC = () => {
     setIsRefreshing(false);
   };
 
+  // Funciones para manejar selección múltiple de grupos musculares
+  const togglePrimaryMuscleGroup = (muscle: string) => {
+    setNewExercise(prev => {
+      const current = prev.primaryMuscleGroups;
+      const updated = current.includes(muscle) 
+        ? current.filter(m => m !== muscle)
+        : current.length < 3 
+          ? [...current, muscle]
+          : current;
+      return { ...prev, primaryMuscleGroups: updated };
+    });
+  };
+
+  const toggleSecondaryMuscleGroup = (muscle: string) => {
+    setNewExercise(prev => {
+      const current = prev.secondaryMuscleGroups;
+      const updated = current.includes(muscle) 
+        ? current.filter(m => m !== muscle)
+        : current.length < 3 
+          ? [...current, muscle]
+          : current;
+      return { ...prev, secondaryMuscleGroups: updated };
+    });
+  };
+
   const renderExercise = ({ item }: { item: Exercise }) => (
     <View style={[styles.exerciseCard, !item.isActive && styles.inactiveCard]}>
       <View style={styles.cardHeader}>
-        {item.thumbnailUrl && (
-          <Image source={{ uri: item.thumbnailUrl }} style={styles.thumbnail} />
+        {item.thumbnailURL ? (
+          <Image source={{ uri: item.thumbnailURL }} style={styles.thumbnail} />
+        ) : item.mediaURL && item.mediaType === 'image' ? (
+          <Image source={{ uri: item.mediaURL }} style={styles.thumbnail} />
+        ) : (
+          <View style={styles.thumbnailPlaceholder}>
+            <Ionicons name="fitness" size={32} color={COLORS.gray} />
+          </View>
         )}
         <View style={styles.exerciseInfo}>
           <Text style={styles.exerciseName}>{item.name}</Text>
           <View style={styles.badgeRow}>
             <View style={styles.muscleBadge}>
-              <Text style={styles.badgeText}>{item.primaryMuscle}</Text>
+              <Text style={styles.badgeText}>{item.primaryMuscleGroups.join(', ')}</Text>
             </View>
             <View style={styles.equipmentBadge}>
               <Text style={styles.badgeText}>{item.equipment}</Text>
@@ -428,7 +600,7 @@ const ManageExercisesScreen: React.FC = () => {
             )}
           </View>
           <Text style={styles.instructions} numberOfLines={2}>
-            {item.instructions}
+            {item.description || item.instructions} {/* Usar description o instructions */}
           </Text>
         </View>
       </View>
@@ -453,16 +625,19 @@ const ManageExercisesScreen: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: COLORS.error }]}
+          style={[styles.actionButton, { backgroundColor: COLORS.danger }]}
           onPress={() => handleDeleteExercise(item)}
         >
           <Ionicons name="trash" size={16} color={COLORS.white} />
         </TouchableOpacity>
 
-        {item.videoUrl && (
+        {item.mediaURL && item.mediaType === 'video' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: COLORS.secondary }]}
-            onPress={() => Alert.alert("Video", "Aquí se abriría el reproductor de video")}
+            onPress={() => {
+              // @ts-ignore
+              navigation.navigate('ExerciseVideo', { exerciseId: item.id });
+            }}
           >
             <Ionicons name="play-circle" size={16} color={COLORS.white} />
           </TouchableOpacity>
@@ -529,24 +704,60 @@ const ManageExercisesScreen: React.FC = () => {
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {/* Filtros adicionales */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+            {/* Filtro por tipo de equipo */}
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={{ color: COLORS.white, fontSize: 12, marginBottom: 5 }}>Tipo de Equipo:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <TouchableOpacity 
+                  style={[styles.filterTag, filterEquipment === 'All' && styles.activeFilterTag]}
+                  onPress={() => setFilterEquipment('All')}
+                >
+                  <Text style={[styles.filterTagText, filterEquipment === 'All' && styles.activeFilterTagText]}>
+                    Todos
+                  </Text>
+                </TouchableOpacity>
+                {equipmentOptions.map((equipment) => (
+                  <TouchableOpacity 
+                    key={equipment}
+                    style={[styles.filterTag, filterEquipment === equipment && styles.activeFilterTag]}
+                    onPress={() => setFilterEquipment(equipment)}
+                  >
+                    <Text style={[styles.filterTagText, filterEquipment === equipment && styles.activeFilterTagText]}>
+                      {equipment}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+
+          </View>
         </View>
         
-        <Text style={styles.resultsText}>
-          {filteredExercises.length} ejercicio{filteredExercises.length !== 1 ? 's' : ''} encontrado{filteredExercises.length !== 1 ? 's' : ''}
-        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.resultsText}>
+            {`${filteredExercises.length} ejercicio${filteredExercises.length !== 1 ? 's' : ''} encontrado${filteredExercises.length !== 1 ? 's' : ''}`}
+          </Text>
+          <TouchableOpacity 
+            style={{ padding: 8, backgroundColor: COLORS.primary, borderRadius: 4 }}
+            onPress={onRefresh}
+          >
+            <Ionicons name="refresh" size={16} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Lista de ejercicios */}
       <FlatList
         data={filteredExercises}
         renderItem={renderExercise}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
+        ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
             <Ionicons name="fitness-outline" size={64} color={COLORS.gray} />
             <Text style={styles.emptyText}>No se encontraron ejercicios</Text>
@@ -554,7 +765,7 @@ const ManageExercisesScreen: React.FC = () => {
               {searchText ? "Prueba con otros términos de búsqueda" : "Agrega el primer ejercicio"}
             </Text>
           </View>
-        }
+        )}
       />
 
       {/* Modal para crear/editar ejercicio */}
@@ -598,20 +809,45 @@ const ManageExercisesScreen: React.FC = () => {
             </View>
             
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Grupo Muscular Principal *</Text>
+              <Text style={styles.formLabel}>Grupos Musculares Principales * (1-3)</Text>
+              <Text style={{ color: COLORS.gray, fontSize: 12, marginBottom: 8 }}>Seleccionados: {newExercise.primaryMuscleGroups.length}/3</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionsScroll}>
                 {muscleGroups.map((muscle) => (
                   <TouchableOpacity 
                     key={muscle}
                     style={[
                       styles.optionChip, 
-                      newExercise.primaryMuscle === muscle && styles.activeOptionChip
+                      newExercise.primaryMuscleGroups.includes(muscle) && styles.activeOptionChip
                     ]}
-                    onPress={() => setNewExercise(prev => ({ ...prev, primaryMuscle: muscle }))}
+                    onPress={() => togglePrimaryMuscleGroup(muscle)}
                   >
                     <Text style={[
                       styles.optionChipText, 
-                      newExercise.primaryMuscle === muscle && styles.activeOptionChipText
+                      newExercise.primaryMuscleGroups.includes(muscle) && styles.activeOptionChipText
+                    ]}>
+                      {muscle}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Grupos Musculares Secundarios (1-3)</Text>
+              <Text style={{ color: COLORS.gray, fontSize: 12, marginBottom: 8 }}>Seleccionados: {newExercise.secondaryMuscleGroups.length}/3</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.optionsScroll}>
+                {muscleGroups.map((muscle) => (
+                  <TouchableOpacity 
+                    key={muscle}
+                    style={[
+                      styles.optionChip, 
+                      newExercise.secondaryMuscleGroups.includes(muscle) && styles.activeOptionChip
+                    ]}
+                    onPress={() => toggleSecondaryMuscleGroup(muscle)}
+                  >
+                    <Text style={[
+                      styles.optionChipText, 
+                      newExercise.secondaryMuscleGroups.includes(muscle) && styles.activeOptionChipText
                     ]}>
                       {muscle}
                     </Text>
@@ -668,6 +904,19 @@ const ManageExercisesScreen: React.FC = () => {
             </View>
             
             <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Descripción Corta *</Text>
+              <TextInput
+                style={[styles.formInput, styles.textArea]}
+                value={newExercise.description}
+                onChangeText={(text) => setNewExercise(prev => ({ ...prev, description: text }))}
+                placeholder="Descripción breve del ejercicio..."
+                placeholderTextColor={COLORS.gray}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Instrucciones paso a paso *</Text>
               <TextInput
                 style={[styles.formInput, styles.textArea]}
@@ -711,6 +960,13 @@ const ManageExercisesScreen: React.FC = () => {
                     {selectedVideo.uri ? "Cambiar Video" : "Seleccionar Video"}
                   </Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity style={styles.mediaButton} onPress={pickThumbnail}>
+                  <Ionicons name="image" size={24} color={COLORS.secondary} />
+                  <Text style={styles.mediaButtonText}>
+                    {selectedThumbnail ? "Cambiar Thumbnail" : "Agregar Thumbnail"}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               {selectedImage && (
@@ -729,6 +985,13 @@ const ManageExercisesScreen: React.FC = () => {
                   <Text style={styles.previewLabel}>Video seleccionado</Text>
                 </View>
               )}
+
+              {selectedThumbnail && (
+                <View style={styles.mediaPreview}>
+                  <Image source={{ uri: selectedThumbnail }} style={styles.imagePreview} />
+                  <Text style={styles.previewLabel}>Thumbnail seleccionado</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.infoBox}>
@@ -736,6 +999,7 @@ const ManageExercisesScreen: React.FC = () => {
               <Text style={styles.infoText}>
                 • La imagen debe ser máximo 5MB (recomendado 16:9){'\n'}
                 • El video debe ser máximo 50MB (MP4, MOV o AVI){'\n'}
+                • El thumbnail debe ser máximo 2MB (recomendado 16:9){'\n'}
                 • Los archivos se subirán automáticamente al guardar
               </Text>
             </View>
@@ -750,13 +1014,13 @@ const ManageExercisesScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#000',
   },
   header: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#181818',
     padding: SIZES.padding,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.grayLight,
+    borderBottomColor: '#333',
   },
   headerTop: {
     flexDirection: 'row',
@@ -767,18 +1031,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: SIZES.fontLarge,
     fontWeight: 'bold',
-    color: COLORS.secondary,
+    color: '#fff',
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#ff4444',
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.padding / 2,
     borderRadius: SIZES.radius,
   },
   createButtonText: {
-    color: COLORS.white,
+    color: '#fff',
     fontWeight: 'bold',
     marginLeft: 4,
   },
@@ -788,7 +1052,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.grayLight,
+    backgroundColor: '#222',
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.padding / 2,
     borderRadius: SIZES.radius,
@@ -798,7 +1062,8 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: SIZES.padding / 2,
     fontSize: SIZES.fontRegular,
-    color: COLORS.secondary,
+    color: '#fff',
+    backgroundColor: '#181818',
   },
   filterTags: {
     flexDirection: 'row',
@@ -806,20 +1071,20 @@ const styles = StyleSheet.create({
   filterTag: {
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.padding / 2,
-    backgroundColor: COLORS.grayLight,
+    backgroundColor: '#222',
     borderRadius: SIZES.radius,
     marginRight: SIZES.padding / 2,
   },
   activeFilterTag: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#ff4444',
   },
   filterTagText: {
     fontSize: SIZES.fontSmall,
-    color: COLORS.gray,
+    color: '#ccc',
     fontWeight: '600',
   },
   activeFilterTagText: {
-    color: COLORS.white,
+    color: '#fff',
   },
   resultsText: {
     fontSize: SIZES.fontSmall,
@@ -833,7 +1098,7 @@ const styles = StyleSheet.create({
     padding: SIZES.padding,
   },
   exerciseCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#181818',
     borderRadius: SIZES.radius,
     padding: SIZES.padding,
     marginBottom: SIZES.padding,
@@ -846,7 +1111,7 @@ const styles = StyleSheet.create({
   inactiveCard: {
     opacity: 0.7,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.error,
+    borderLeftColor: COLORS.danger,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -865,8 +1130,9 @@ const styles = StyleSheet.create({
   exerciseName: {
     fontSize: SIZES.fontMedium,
     fontWeight: 'bold',
-    color: COLORS.secondary,
-    marginBottom: SIZES.padding / 2,
+    color: '#fff',
+    flex: 1,
+    marginRight: SIZES.padding / 2,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -897,7 +1163,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   inactiveBadge: {
-    backgroundColor: COLORS.error,
+    backgroundColor: COLORS.danger,
     paddingHorizontal: SIZES.padding / 2,
     paddingVertical: 2,
     borderRadius: 4,
@@ -918,12 +1184,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SIZES.padding / 2,
+    borderRadius: 4,
     marginHorizontal: 2,
+    backgroundColor: '#ff4444',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: SIZES.fontSmall,
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -1112,6 +1386,14 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     marginLeft: SIZES.padding / 2,
     lineHeight: 18,
+  },
+  thumbnailPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: SIZES.radius,
+    backgroundColor: COLORS.grayLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
