@@ -70,22 +70,31 @@ filesToCopy.forEach(file => {
 
   servicesToReplace.forEach(({ from, to }) => {
     const fromPath = path.join(tempDir, 'src', 'services', from);
+    console.log(`🔍 Verificando: ${fromPath}`);
     if (fs.existsSync(fromPath)) {
       fs.unlinkSync(fromPath);
       console.log(`✅ Removido ${from}`);
+    } else {
+      console.log(`⚠️ No encontrado: ${from}`);
     }
   });
 
   // Reemplazar ProfileScreen con versión web
   const profileScreenPath = path.join(tempDir, 'src', 'screens', 'member', 'ProfileScreen.tsx');
   const profileScreenWebPath = path.join(tempDir, 'src', 'screens', 'member', 'ProfileScreen.web.tsx');
+  console.log(`🔍 Verificando ProfileScreen: ${profileScreenPath}`);
   if (fs.existsSync(profileScreenPath)) {
     fs.unlinkSync(profileScreenPath);
     console.log('✅ Removido ProfileScreen.tsx');
+  } else {
+    console.log('⚠️ No encontrado: ProfileScreen.tsx');
   }
+  console.log(`🔍 Verificando ProfileScreen.web: ${profileScreenWebPath}`);
   if (fs.existsSync(profileScreenWebPath)) {
     fs.renameSync(profileScreenWebPath, profileScreenPath);
     console.log('✅ Reemplazado con ProfileScreen.web.tsx');
+  } else {
+    console.log('⚠️ No encontrado: ProfileScreen.web.tsx');
   }
 
 // Renombrar app.config.web.js a app.config.js
