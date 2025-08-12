@@ -97,40 +97,49 @@ filesToCopy.forEach(file => {
     console.log('⚠️ No encontrado: ProfileScreen.web.tsx');
   }
 
-// Renombrar app.config.web.js a app.config.js
-const webConfigPath = path.join(tempDir, 'app.config.web.js');
-const configPath = path.join(tempDir, 'app.config.js');
-if (fs.existsSync(webConfigPath)) {
-  fs.renameSync(webConfigPath, configPath);
-}
+  // Renombrar app.config.web.js a app.config.js
+  const webConfigPath = path.join(tempDir, 'app.config.web.js');
+  const configPath = path.join(tempDir, 'app.config.js');
+  if (fs.existsSync(webConfigPath)) {
+    fs.renameSync(webConfigPath, configPath);
+  }
 
-fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify(packageJson, null, 2));
+  fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify(packageJson, null, 2));
 
-// Cambiar al directorio temporal
-process.chdir(tempDir);
+  console.log('📦 Instalando dependencias...');
+  // Cambiar al directorio temporal
+  process.chdir(tempDir);
 
 try {
   // Instalar dependencias
-  console.log('📦 Instalando dependencias...');
   execSync('npm install', { stdio: 'inherit' });
   
   // Generar build web
   console.log('🔨 Generando build web...');
   execSync('npx expo export --platform web', { stdio: 'inherit' });
   
-  // Mover build al directorio principal
+  // Verificar que se creó el directorio web-build
   if (fs.existsSync('web-build')) {
+    console.log('✅ Directorio web-build creado exitosamente');
+    
+    // Mover build al directorio principal
     const webBuildPath = path.join(process.cwd(), 'web-build');
     const parentWebBuildPath = path.join('..', 'web-build');
     
     // Copiar web-build al directorio padre
     copyFileOrDir(webBuildPath, parentWebBuildPath);
     console.log('✅ Web app generada exitosamente en web-build/');
+  } else {
+    console.error('❌ No se encontró el directorio web-build después del build');
+    process.exit(1);
   }
 } catch (error) {
   console.error('❌ Error generando web app:', error.message);
+  process.exit(1);
 } finally {
   // Limpiar directorio temporal
   process.chdir('..');
-  fs.rmSync(tempDir, { recursive: true });
+  if (fs.existsSync(tempDir)) {
+    fs.rmSync(tempDir, { recursive: true });
+  }
 }
