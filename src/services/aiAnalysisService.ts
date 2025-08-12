@@ -5,11 +5,11 @@ import Constants from 'expo-constants';
 const HUGGING_FACE_API_URL = 'https://api-inference.huggingface.co/models/nateraw/food101';
 // URL alternativa para testing
 const HUGGING_FACE_API_URL_ALT = 'https://api-inference.huggingface.co/models/google/vit-base-patch16-224';
-const HUGGING_FACE_TOKEN = process.env.EXPO_PUBLIC_HUGGING_FACE_TOKEN || '';
+const HUGGING_FACE_TOKEN = process.env.EXPO_PUBLIC_HUGGING_FACE_TOKEN || 'your-huggingface-token-here';
 
 // Configuración de OpenAI
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || 'your-api-key-here';
+const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || 'your-openai-api-key-here';
 
 // Debug: Verificar si la API key se está leyendo correctamente
 console.log('🔑 OpenAI API Key configurada:', OPENAI_API_KEY ? 'SÍ' : 'NO');
