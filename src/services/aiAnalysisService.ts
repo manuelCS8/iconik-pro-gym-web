@@ -1,4 +1,5 @@
 import { Alert } from 'react-native';
+import Constants from 'expo-constants';
 
 // Configuración de Hugging Face
 const HUGGING_FACE_API_URL = 'https://api-inference.huggingface.co/models/nateraw/food101';
@@ -8,7 +9,13 @@ const HUGGING_FACE_TOKEN = process.env.EXPO_PUBLIC_HUGGING_FACE_TOKEN || '';
 
 // Configuración de OpenAI
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
+const OPENAI_API_KEY = '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';
+
+// Debug: Verificar si la API key se está leyendo correctamente
+console.log('🔑 OpenAI API Key configurada:', OPENAI_API_KEY ? 'SÍ' : 'NO');
+console.log('🔑 OpenAI API Key length:', OPENAI_API_KEY.length);
+console.log('🔑 OpenAI API Key preview:', OPENAI_API_KEY.substring(0, 10) + '...');
+console.log('🔑 Constants.expoConfig.extra:', Constants.expoConfig?.extra);
 
 interface MealAnalysis {
   calories: number;

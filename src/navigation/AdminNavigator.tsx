@@ -15,6 +15,9 @@ import TestImageUploadScreen from '../screens/admin/TestImageUploadScreen';
 import UpdateRoutinesScreen from '../screens/admin/UpdateRoutinesScreen';
 import DeleteRoutinesScreen from '../screens/admin/DeleteRoutinesScreen';
 import TestRoutinesScreen from '../screens/admin/TestRoutinesScreen';
+import WebExerciseUploadScreen from '../screens/admin/WebExerciseUploadScreen';
+import WebExerciseListScreen from '../screens/admin/WebExerciseListScreen';
+import ExerciseMediaDiagnosticScreen from '../screens/admin/ExerciseMediaDiagnosticScreen';
 import { COLORS } from '../utils/theme';
 
 export type AdminTabParamList = {
@@ -137,6 +140,33 @@ const GestionStack = () => (
       options={{ 
         headerShown: true,
         title: 'Diagnóstico de Rutinas',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="WebExerciseUpload" 
+      component={WebExerciseUploadScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Crear Ejercicio (Web)',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="WebExerciseList" 
+      component={WebExerciseListScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Lista de Ejercicios (Web)',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="ExerciseMediaDiagnostic" 
+      component={ExerciseMediaDiagnosticScreen}
+      options={{ 
+        headerShown: true,
+        title: 'Diagnóstico de Medios',
         headerBackTitle: 'Atrás'
       }}
     />

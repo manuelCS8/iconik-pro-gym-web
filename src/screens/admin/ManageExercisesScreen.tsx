@@ -656,13 +656,45 @@ const ManageExercisesScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.title}>Gestión de Ejercicios</Text>
-          <TouchableOpacity 
-            style={styles.createButton}
-            onPress={() => setShowCreateModal(true)}
-          >
-            <Ionicons name="add-circle" size={20} color={COLORS.white} />
-            <Text style={styles.createButtonText}>Agregar</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={[styles.createButton, styles.webButton]}
+              onPress={() => {
+                // @ts-ignore
+                navigation.navigate('WebExerciseUpload');
+              }}
+            >
+              <Ionicons name="globe" size={20} color={COLORS.white} />
+              <Text style={styles.createButtonText}>Crear</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.createButton, styles.listButton]}
+              onPress={() => {
+                // @ts-ignore
+                navigation.navigate('WebExerciseList');
+              }}
+            >
+              <Ionicons name="list" size={20} color={COLORS.white} />
+              <Text style={styles.createButtonText}>Lista</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.createButton, styles.diagnosticButton]}
+              onPress={() => {
+                // @ts-ignore
+                navigation.navigate('ExerciseMediaDiagnostic');
+              }}
+            >
+              <Ionicons name="bug" size={20} color={COLORS.white} />
+              <Text style={styles.createButtonText}>Media</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.createButton}
+              onPress={() => setShowCreateModal(true)}
+            >
+              <Ionicons name="add-circle" size={20} color={COLORS.white} />
+              <Text style={styles.createButtonText}>Agregar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         
         {/* Filtros y búsqueda */}
@@ -1033,6 +1065,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1040,6 +1076,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.padding / 2,
     borderRadius: SIZES.radius,
+  },
+  webButton: {
+    backgroundColor: '#4CAF50',
+  },
+  listButton: {
+    backgroundColor: '#2196F3',
+  },
+  diagnosticButton: {
+    backgroundColor: '#FF9800',
   },
   createButtonText: {
     color: '#fff',

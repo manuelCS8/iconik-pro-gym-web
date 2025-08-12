@@ -17,12 +17,17 @@ import { db } from '../config/firebase';
 export interface RoutineExercise {
   exerciseId: string;
   exerciseName: string;
-  sets: number;
+  sets?: number; // Para compatibilidad con rutinas existentes
+  series?: number; // Campo usado en rutinas del gimnasio
   reps: number;
   weight?: number;
   duration?: number; // en segundos
   restTime: number; // en segundos
   notes?: string;
+  order?: number; // Orden del ejercicio en la rutina
+  primaryMuscleGroups?: string[]; // Grupos musculares principales
+  equipment?: string; // Equipo necesario
+  difficulty?: string; // Dificultad del ejercicio
 }
 
 export interface Routine {

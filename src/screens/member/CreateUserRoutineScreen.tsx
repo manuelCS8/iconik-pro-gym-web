@@ -13,9 +13,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../utils/theme';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 interface Exercise {
   id: string;
@@ -347,6 +348,8 @@ const CreateUserRoutineScreen: React.FC = () => {
           </View>
         </View>
 
+
+
         {/* Exercises Section */}
         <View style={styles.exercisesContainer}>
           <View style={styles.exercisesHeader}>
@@ -422,6 +425,8 @@ const CreateUserRoutineScreen: React.FC = () => {
           </View>
         </View>
       )}
+
+
     </SafeAreaView>
   );
 };
@@ -574,18 +579,23 @@ const styles = StyleSheet.create({
   },
   routineExerciseCard: {
     backgroundColor: COLORS.lightGray,
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 8,
+    padding: 18,
+    marginBottom: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   routineExerciseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   routineExerciseName: {
-    fontSize: SIZES.body,
+    fontSize: SIZES.body + 1,
     fontWeight: 'bold',
     color: COLORS.text,
     flex: 1,
@@ -596,7 +606,7 @@ const styles = StyleSheet.create({
   exerciseInputs: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   inputGroup: {
     flex: 1,
@@ -604,12 +614,14 @@ const styles = StyleSheet.create({
   },
   notesInput: {
     backgroundColor: COLORS.white,
-    padding: 8,
-    borderRadius: 6,
-    fontSize: SIZES.small,
+    padding: 12,
+    borderRadius: 8,
+    fontSize: SIZES.small + 1,
     color: COLORS.text,
     borderWidth: 1,
     borderColor: COLORS.gray,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   createButton: {
     flexDirection: 'row',
@@ -665,6 +677,7 @@ const styles = StyleSheet.create({
   exercisesList: {
     flex: 1,
   },
+
 });
 
 export default CreateUserRoutineScreen; 

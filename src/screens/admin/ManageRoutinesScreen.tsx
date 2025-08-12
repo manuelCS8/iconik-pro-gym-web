@@ -267,113 +267,7 @@ const ManageRoutinesScreen: React.FC = () => {
     }
   };
 
-  const handleCreateSampleRoutines = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Crear rutinas de ejemplo
-      const sampleRoutines = [
-        {
-          name: "Rutina de Pecho Principiante",
-          description: "Rutina completa para desarrollar el pecho, ideal para principiantes",
-          level: 'Principiante' as const,
-          objective: "Desarrollo muscular del pecho",
-          estimatedDuration: 45,
-          exercises: [
-            {
-              exerciseId: "sample1",
-              exerciseName: "Press de Banca con Barra",
-              primaryMuscleGroups: ["Pecho"],
-              equipment: "Barra",
-              difficulty: "Principiante",
-              series: 3,
-              reps: 12,
-              restTime: 90,
-              order: 1,
-              notes: "Enfócate en la técnica"
-            },
-            {
-              exerciseId: "sample2", 
-              exerciseName: "Flexiones",
-              primaryMuscleGroups: ["Pecho"],
-              equipment: "Sin Equipo",
-              difficulty: "Principiante",
-              series: 3,
-              reps: 10,
-              restTime: 60,
-              order: 2,
-              notes: "Si no puedes hacer 10, haz las que puedas"
-            }
-          ],
-          creatorType: 'GYM' as const,
-          createdAt: serverTimestamp(),
-          createdBy: 'admin',
-          isActive: true,
-          isPublic: true
-        },
-        {
-          name: "Rutina de Piernas Intermedia",
-          description: "Rutina intensa para fortalecer las piernas",
-          level: 'Intermedio' as const,
-          objective: "Fortalecimiento de piernas",
-          estimatedDuration: 60,
-          exercises: [
-            {
-              exerciseId: "sample3",
-              exerciseName: "Sentadillas",
-              primaryMuscleGroups: ["Cuádriceps"],
-              equipment: "Barra",
-              difficulty: "Intermedio",
-              series: 4,
-              reps: 15,
-              restTime: 120,
-              order: 1,
-              notes: "Mantén la espalda recta"
-            },
-            {
-              exerciseId: "sample4",
-              exerciseName: "Peso Muerto",
-              primaryMuscleGroups: ["Femorales"],
-              equipment: "Barra",
-              difficulty: "Intermedio",
-              series: 3,
-              reps: 12,
-              restTime: 120,
-              order: 2,
-              notes: "Técnica perfecta antes de aumentar peso"
-            }
-          ],
-          creatorType: 'GYM' as const,
-          createdAt: serverTimestamp(),
-          createdBy: 'admin',
-          isActive: true,
-          isPublic: true
-        }
-      ];
 
-      for (const routineData of sampleRoutines) {
-        const docRef = await addDoc(collection(db, 'routines'), routineData);
-        
-        // Agregar a lista local
-        const newRoutineData: GymRoutine = {
-          id: docRef.id,
-          ...routineData,
-          createdAt: new Date(),
-        };
-        
-        setRoutines(prev => [newRoutineData, ...prev]);
-      }
-
-      Alert.alert("Éxito", "Rutinas de ejemplo creadas correctamente");
-      console.log("✅ Rutinas de ejemplo creadas en Firestore");
-
-    } catch (error) {
-      console.error("Error creating sample routines:", error);
-      Alert.alert("Error", "No se pudieron crear las rutinas de ejemplo");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleEditRoutine = (routine: GymRoutine) => {
     Alert.alert(
@@ -672,13 +566,6 @@ const ManageRoutinesScreen: React.FC = () => {
         <Text style={styles.title}>Rutinas Oficiales</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity 
-            style={[styles.createButton, styles.sampleButton]}
-            onPress={handleCreateSampleRoutines}
-          >
-            <Ionicons name="library" size={18} color={COLORS.white} />
-            <Text style={styles.createButtonText}>Ejemplo</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
             style={styles.createButton}
             onPress={() => setShowCreateModal(true)}
           >
@@ -960,6 +847,8 @@ const ManageRoutinesScreen: React.FC = () => {
                     placeholder="Notas adicionales (opcional)"
                     placeholderTextColor={COLORS.gray}
                     multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
                   />
                 </View>
               </View>
@@ -1067,9 +956,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#666',
     opacity: 0.6,
   },
-  sampleButton: {
-    backgroundColor: '#666',
-  },
+
   createButtonText: {
     color: '#fff',
     fontWeight: 'bold',
@@ -1460,12 +1347,14 @@ const styles = StyleSheet.create({
   },
   notesInput: {
     backgroundColor: COLORS.grayLight,
-    padding: SIZES.padding / 2,
+    padding: SIZES.padding,
     borderRadius: SIZES.radius / 2,
-    fontSize: SIZES.fontSmall,
+    fontSize: SIZES.fontSmall + 1,
     color: COLORS.secondary,
-    minHeight: 60,
+    minHeight: 80,
     textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: COLORS.gray,
   },
   emptyExercises: {
     alignItems: 'center',

@@ -3,6 +3,7 @@ import authReducer from './slices/authSlice';
 import adminReducer from './slices/adminSlice';
 import nutritionReducer from './slices/nutritionSlice';
 import userRoutinesReducer from './slices/userRoutinesSlice';
+import userPreferencesReducer from './slices/userPreferencesSlice';
 // (Luego agregaremos memberReducer, adminReducer, etc.)
 
 export const store = configureStore({
@@ -11,6 +12,7 @@ export const store = configureStore({
     admin: adminReducer,
     nutrition: nutritionReducer,
     userRoutines: userRoutinesReducer,
+    userPreferences: userPreferencesReducer,
     // member: memberReducer,
     // admin: adminReducer,
   },

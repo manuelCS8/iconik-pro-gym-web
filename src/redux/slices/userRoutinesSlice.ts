@@ -3,6 +3,9 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 export interface UserRoutineExercise {
   exerciseId: string;
   exerciseName: string;
+  primaryMuscleGroups?: string[];
+  equipment?: string;
+  difficulty?: string;
   sets: number;
   reps: number;
   weight?: number;
@@ -52,6 +55,7 @@ const userRoutinesSlice = createSlice({
     setRoutines: (state, action: PayloadAction<UserRoutine[]>) => {
       state.routines = action.payload;
     },
+
     addRoutine: (state, action: PayloadAction<UserRoutine>) => {
       state.routines.unshift(action.payload);
     },
@@ -64,6 +68,7 @@ const userRoutinesSlice = createSlice({
     deleteRoutine: (state, action: PayloadAction<string>) => {
       state.routines = state.routines.filter(routine => routine.id !== action.payload);
     },
+
     setCurrentRoutine: (state, action: PayloadAction<UserRoutine | null>) => {
       state.currentRoutine = action.payload;
     },

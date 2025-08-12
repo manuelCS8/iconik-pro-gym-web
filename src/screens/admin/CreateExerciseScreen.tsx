@@ -92,6 +92,13 @@ const CreateExerciseScreen: React.FC = () => {
     if (!selectedMedia) return null;
 
     try {
+      console.log('🚀 Iniciando subida de media:', {
+        uri: selectedMedia.uri,
+        type: selectedMedia.type,
+        fileName: selectedMedia.fileName,
+        fileSize: selectedMedia.fileSize
+      });
+
       setIsUploading(true);
       setUploadProgress(0);
 
@@ -101,20 +108,29 @@ const CreateExerciseScreen: React.FC = () => {
         `exercises/${user?.uid || 'anonymous'}`
       );
 
+      console.log('📁 Ruta de storage generada:', storagePath);
+
       // Subir archivo
       const result = await uploadFile(
         selectedMedia.uri,
         storagePath,
         (progress) => {
+          console.log('📊 Progreso de subida:', progress.percent + '%');
           setUploadProgress(progress.percent);
         }
       );
+
+      console.log('✅ Archivo subido exitosamente:', {
+        url: result.url,
+        path: result.path
+      });
 
       setIsUploading(false);
       setUploadProgress(0);
       
       return result.url;
     } catch (error: any) {
+      console.error('❌ Error en handleUploadMedia:', error);
       setIsUploading(false);
       setUploadProgress(0);
       Alert.alert('Error', 'Error al subir el archivo: ' + error.message);
@@ -130,12 +146,17 @@ const CreateExerciseScreen: React.FC = () => {
     }
 
     try {
+      console.log('📝 Iniciando creación de ejercicio:', form);
       setIsSubmitting(true);
 
       // Subir media si existe
       let mediaURL = '';
       if (selectedMedia) {
+        console.log('🎬 Media seleccionado, iniciando subida...');
         mediaURL = await handleUploadMedia() || '';
+        console.log('🔗 URL de media obtenida:', mediaURL);
+      } else {
+        console.log('📷 No hay media seleccionado');
       }
 
       // Crear documento en Firestore
@@ -148,7 +169,11 @@ const CreateExerciseScreen: React.FC = () => {
         updatedAt: new Date(),
       };
 
+      console.log('💾 Datos del ejercicio a guardar:', exerciseData);
+
       const docRef = await addDoc(collection(db, 'exercises'), exerciseData);
+
+      console.log('✅ Ejercicio creado exitosamente con ID:', docRef.id);
 
       Alert.alert(
         'Éxito', 
@@ -170,9 +195,8 @@ const CreateExerciseScreen: React.FC = () => {
           }
         ]
       );
-
-      console.log('Ejercicio creado con ID:', docRef.id);
     } catch (error: any) {
+      console.error('❌ Error al crear ejercicio:', error);
       Alert.alert('Error', 'Error al crear el ejercicio: ' + error.message);
     } finally {
       setIsSubmitting(false);

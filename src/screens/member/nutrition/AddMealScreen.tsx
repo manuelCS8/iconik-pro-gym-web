@@ -271,7 +271,7 @@ const AddMealScreen: React.FC = () => {
 
         {/* Descripción */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Descripción (Opcional)</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Nombre del Alimento</Text>
           <TextInput
             style={[styles.descriptionInput, { 
               backgroundColor: colors.card, 
@@ -280,7 +280,7 @@ const AddMealScreen: React.FC = () => {
             }]}
             value={description}
             onChangeText={setDescription}
-            placeholder="Describe tu comida..."
+            placeholder="Nombre del alimento o coloca un nombre para tu comida..."
             placeholderTextColor={colors.textSecondary}
             multiline
             numberOfLines={3}
@@ -350,8 +350,8 @@ const AddMealScreen: React.FC = () => {
             { 
               backgroundColor: analysis ? '#FF4444' : '#ccc',
               marginTop: 20,
-              marginBottom: 20,
-              paddingVertical: 16,
+              marginBottom: 100, // Espacio para la barra de navegación
+              paddingVertical: 24, // Botón más grande
               borderRadius: 12,
               elevation: 3,
               shadowColor: '#000',
@@ -368,47 +368,14 @@ const AddMealScreen: React.FC = () => {
             <ActivityIndicator color="white" />
           ) : (
             <>
-              <Ionicons name="save" size={24} color="white" />
-              <Text style={[styles.saveButtonText, { fontSize: 18, fontWeight: 'bold' }]}>
+              <Ionicons name="save" size={28} color="white" />
+              <Text style={[styles.saveButtonText, { fontSize: 20, fontWeight: 'bold' }]}>
                 {analysis ? '💾 GUARDAR COMIDA' : '⏳ Esperando análisis...'}
               </Text>
             </>
           )}
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Botón guardar fijo en la parte inferior */}
-      <View style={styles.fixedBottomContainer}>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { 
-              backgroundColor: analysis ? '#FF4444' : '#ccc',
-              paddingVertical: 16,
-              borderRadius: 12,
-              elevation: 5,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 3.84,
-            },
-            !analysis && { opacity: 0.5 }
-          ]}
-          onPress={handleSaveMeal}
-          disabled={!analysis || loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <>
-              <Ionicons name="save" size={24} color="white" />
-              <Text style={[styles.saveButtonText, { fontSize: 18, fontWeight: 'bold' }]}>
-                {analysis ? '💾 GUARDAR COMIDA' : '⏳ Esperando análisis...'}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
@@ -560,22 +527,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
-  },
-  fixedBottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
 });
 

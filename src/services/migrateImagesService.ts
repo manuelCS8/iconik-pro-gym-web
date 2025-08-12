@@ -2,196 +2,139 @@ import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { uploadFile, generateStoragePath } from './storage';
 
-export interface ExerciseWithLocalImage {
+interface Exercise {
   id: string;
   name: string;
   mediaURL?: string;
   mediaType?: string;
+  [key: string]: any;
 }
 
 /**
- * Encuentra todos los ejercicios con imágenes locales
+ * Migra imágenes/videos de ejercicios existentes a Firebase Storage
  */
-export async function findExercisesWithLocalImages(): Promise<ExerciseWithLocalImage[]> {
+export const migrateExerciseMedia = async (onProgress?: (progress: number) => void) => {
+  try {
+    console.log('🔄 Iniciando migración de media de ejercicios...');
+    
+    // Obtener todos los ejercicios
+    const exercisesRef = collection(db, 'exercises');
+    const snapshot = await getDocs(exercisesRef);
+    
+    const exercises = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Exercise[];
+    
+    console.log(`📊 Encontrados ${exercises.length} ejercicios`);
+    
+    // Filtrar ejercicios que tienen media local
+    const exercisesWithLocalMedia = exercises.filter(exercise => 
+      exercise.mediaURL && 
+      exercise.mediaURL.startsWith('file://') &&
+      exercise.mediaType
+    );
+    
+    console.log(`🎬 ${exercisesWithLocalMedia.length} ejercicios con media local encontrados`);
+    
+    if (exercisesWithLocalMedia.length === 0) {
+      console.log('✅ No hay ejercicios que necesiten migración');
+      return { success: true, migrated: 0, errors: 0 };
+    }
+    
+    let migrated = 0;
+    let errors = 0;
+    
+    for (let i = 0; i < exercisesWithLocalMedia.length; i++) {
+      const exercise = exercisesWithLocalMedia[i];
+      
+      try {
+        console.log(`🔄 Migrando ejercicio ${i + 1}/${exercisesWithLocalMedia.length}: ${exercise.name}`);
+        
+        // Generar nueva ruta en Storage (más simple)
+        const fileName = `migrated_${Date.now()}_${exercise.id}`;
+        const storagePath = `exercises/${fileName}`;
+        
+        // Subir archivo a Firebase Storage
+        const result = await uploadFile(exercise.mediaURL!, storagePath);
+        
+        // Actualizar documento en Firestore
+        const exerciseRef = doc(db, 'exercises', exercise.id);
+        await updateDoc(exerciseRef, {
+          mediaURL: result.url,
+          migratedAt: new Date(),
+          originalMediaURL: exercise.mediaURL // Guardar URL original como backup
+        });
+        
+        console.log(`✅ Ejercicio migrado: ${exercise.name} -> ${result.url}`);
+        migrated++;
+        
+        // Actualizar progreso
+        if (onProgress) {
+          onProgress(((i + 1) / exercisesWithLocalMedia.length) * 100);
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error migrando ejercicio ${exercise.name}:`, error);
+        errors++;
+      }
+    }
+    
+    console.log(`✅ Migración completada: ${migrated} exitosas, ${errors} errores`);
+    
+    return {
+      success: true,
+      migrated,
+      errors,
+      total: exercisesWithLocalMedia.length
+    };
+    
+  } catch (error) {
+    console.error('❌ Error en migración:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    };
+  }
+};
+
+/**
+ * Verifica el estado de migración de ejercicios
+ */
+export const checkMigrationStatus = async () => {
   try {
     const exercisesRef = collection(db, 'exercises');
     const snapshot = await getDocs(exercisesRef);
     
-    const exercisesWithLocalImages: ExerciseWithLocalImage[] = [];
+    const exercises = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Exercise[];
     
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.mediaType === 'image' && data.mediaURL && data.mediaURL.startsWith('file://')) {
-        exercisesWithLocalImages.push({
-          id: doc.id,
-          name: data.name || '',
-          mediaURL: data.mediaURL,
-          mediaType: data.mediaType,
-        });
-      }
-    });
-    
-    console.log(`📊 Encontrados ${exercisesWithLocalImages.length} ejercicios con imágenes locales`);
-    return exercisesWithLocalImages;
-  } catch (error) {
-    console.error('Error buscando ejercicios con imágenes locales:', error);
-    throw error;
-  }
-}
-
-/**
- * Migra una imagen local a Firebase Storage
- */
-export async function migrateLocalImageToStorage(
-  exerciseId: string,
-  localImageUri: string,
-  exerciseName: string
-): Promise<string> {
-  try {
-    console.log(`🔄 Migrando imagen para: ${exerciseName}`);
-    
-    // Generar nombre de archivo
-    const fileName = `migrated_${exerciseName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.jpg`;
-    const storagePath = generateStoragePath(fileName, 'exercises/images');
-    
-    // Subir imagen a Firebase Storage
-    const uploadResult = await uploadFile(localImageUri, storagePath, (progress) => {
-      console.log(`Subiendo imagen: ${progress.percent.toFixed(1)}%`);
-    });
-    
-    console.log(`✅ Imagen migrada exitosamente: ${uploadResult.url}`);
-    return uploadResult.url;
-  } catch (error) {
-    console.error(`Error migrando imagen para ${exerciseName}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Actualiza un ejercicio con la nueva URL de imagen
- */
-export async function updateExerciseWithImageURL(
-  exerciseId: string,
-  imageURL: string
-): Promise<void> {
-  try {
-    const exerciseRef = doc(db, 'exercises', exerciseId);
-    await updateDoc(exerciseRef, {
-      imageURL: imageURL,
-      updatedAt: new Date(),
-    });
-    
-    console.log(`✅ Ejercicio actualizado con nueva URL de imagen: ${exerciseId}`);
-  } catch (error) {
-    console.error('Error actualizando ejercicio con URL de imagen:', error);
-    throw error;
-  }
-}
-
-/**
- * Migra todas las imágenes locales a Firebase Storage
- */
-export async function migrateAllLocalImages(): Promise<{
-  total: number;
-  success: number;
-  failed: number;
-  results: Array<{
-    exerciseId: string;
-    exerciseName: string;
-    success: boolean;
-    imageURL?: string;
-    error?: string;
-  }>;
-}> {
-  try {
-    const exercises = await findExercisesWithLocalImages();
-    const results = [];
-    let success = 0;
-    let failed = 0;
-    
-    console.log(`🚀 Iniciando migración de ${exercises.length} imágenes...`);
-    
-    for (const exercise of exercises) {
-      try {
-        // Migrar imagen a Firebase Storage
-        const imageURL = await migrateLocalImageToStorage(
-          exercise.id,
-          exercise.mediaURL!,
-          exercise.name
-        );
-        
-        // Actualizar ejercicio con nueva URL
-        await updateExerciseWithImageURL(exercise.id, imageURL);
-        
-        results.push({
-          exerciseId: exercise.id,
-          exerciseName: exercise.name,
-          success: true,
-          imageURL: imageURL,
-        });
-        
-        success++;
-        console.log(`✅ ${exercise.name} - Migrado exitosamente`);
-        
-      } catch (error) {
-        results.push({
-          exerciseId: exercise.id,
-          exerciseName: exercise.name,
-          success: false,
-          error: error instanceof Error ? error.message : 'Error desconocido',
-        });
-        
-        failed++;
-        console.error(`❌ ${exercise.name} - Error en migración:`, error);
-      }
-    }
-    
-    console.log(`🎉 Migración completada: ${success} exitosas, ${failed} fallidas`);
-    
-    return {
+    const stats = {
       total: exercises.length,
-      success,
-      failed,
-      results,
+      withLocalMedia: 0,
+      withFirebaseMedia: 0,
+      withoutMedia: 0,
+      migrated: 0
     };
-  } catch (error) {
-    console.error('Error en migración masiva:', error);
-    throw error;
-  }
-}
-
-/**
- * Verifica si un ejercicio ya tiene imagen migrada
- */
-export async function checkExerciseImageStatus(exerciseId: string): Promise<{
-  hasLocalImage: boolean;
-  hasMigratedImage: boolean;
-  localImageURL?: string;
-  migratedImageURL?: string;
-}> {
-  try {
-    const exerciseRef = doc(db, 'exercises', exerciseId);
-    const exerciseDoc = await getDocs(collection(db, 'exercises'));
     
-    let exerciseData: any = null;
-    exerciseDoc.forEach((doc) => {
-      if (doc.id === exerciseId) {
-        exerciseData = doc.data();
+    exercises.forEach(exercise => {
+      if (!exercise.mediaURL) {
+        stats.withoutMedia++;
+      } else if (exercise.mediaURL.startsWith('file://')) {
+        stats.withLocalMedia++;
+      } else if (exercise.mediaURL.startsWith('https://')) {
+        stats.withFirebaseMedia++;
+        if (exercise.migratedAt) {
+          stats.migrated++;
+        }
       }
     });
     
-    if (!exerciseData) {
-      throw new Error('Ejercicio no encontrado');
-    }
-    
-    return {
-      hasLocalImage: !!(exerciseData.mediaURL && exerciseData.mediaURL.startsWith('file://')),
-      hasMigratedImage: !!(exerciseData.imageURL && exerciseData.imageURL.startsWith('https://')),
-      localImageURL: exerciseData.mediaURL,
-      migratedImageURL: exerciseData.imageURL,
-    };
+    return stats;
   } catch (error) {
-    console.error('Error verificando estado de imagen:', error);
+    console.error('❌ Error verificando estado de migración:', error);
     throw error;
   }
-} 
+}; 

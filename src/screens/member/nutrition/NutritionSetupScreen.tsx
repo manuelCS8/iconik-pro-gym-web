@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
-  Alert
+  Alert,
+  Keyboard
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { COLORS } from '../../../utils/theme';
 import nutritionService from '../../../services/nutritionService';
 import tempStorageService from '../../../services/tempStorageService';
+import nutritionDataService from '../../../services/nutritionDataService';
 import { UserMetrics, NutritionGoals } from '../../../redux/slices/nutritionSlice';
 
 interface SetupForm {
@@ -59,6 +61,7 @@ const NutritionSetupScreen: React.FC = () => {
   });
 
   const [calculatedMacros, setCalculatedMacros] = useState<any>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const steps = [
     { id: 1, title: 'Datos Personales', description: 'Información básica para el cálculo' },
@@ -69,6 +72,21 @@ const NutritionSetupScreen: React.FC = () => {
 
   const activityLevels = nutritionService.getActivityLevelOptions();
   const intensityOptions = nutritionService.getIntensityOptions(formData.objective);
+
+  // Detectar cuando el teclado se muestra/oculta
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setIsKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   const updateFormData = (field: keyof SetupForm, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -169,6 +187,25 @@ const NutritionSetupScreen: React.FC = () => {
 
       // Guardar en almacenamiento temporal
       await tempStorageService.saveNutritionConfig({
+        userId: uid,
+        weight: calculatedMacros.userMetrics.weight,
+        height: calculatedMacros.userMetrics.height,
+        age: calculatedMacros.userMetrics.age,
+        gender: calculatedMacros.userMetrics.gender,
+        activityLevel: calculatedMacros.userMetrics.activityLevel,
+        objective: calculatedMacros.goals.objective,
+        intensity: calculatedMacros.goals.intensity,
+        targetWeight: calculatedMacros.goals.targetWeight,
+        targetDate: calculatedMacros.goals.targetDate,
+        calories: calculatedMacros.macros.calories,
+        protein: calculatedMacros.macros.protein,
+        carbs: calculatedMacros.macros.carbs,
+        fats: calculatedMacros.macros.fats,
+        tier: 'basic'
+      });
+
+      // Guardar en servicio local de datos nutricionales
+      await nutritionDataService.saveNutritionData({
         userId: uid,
         weight: calculatedMacros.userMetrics.weight,
         height: calculatedMacros.userMetrics.height,
@@ -318,6 +355,23 @@ const NutritionSetupScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
+
+             {/* Next Button for Step 1 */}
+       <TouchableOpacity
+         style={[styles.navButton, styles.nextButton, { 
+           backgroundColor: colors.primary, 
+           marginTop: 20,
+           marginBottom: 100, // Espacio para la barra de navegación
+           paddingVertical: 24, // Doble altura
+           minHeight: 80 // Altura mínima más grande
+         }]}
+         onPress={handleNext}
+       >
+         <Text style={[styles.nextButtonText, { fontSize: 20 }]}>
+           Siguiente
+         </Text>
+         <Ionicons name="arrow-forward" size={24} color="white" />
+       </TouchableOpacity>
     </View>
   );
 
@@ -398,36 +452,88 @@ const NutritionSetupScreen: React.FC = () => {
         </View>
       )}
 
-      <View style={styles.inputGroup}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>Intensidad</Text>
-        {intensityOptions.map((intensity) => (
-          <TouchableOpacity
-            key={intensity.value}
-            style={[
-              styles.optionButton,
-              formData.intensity === intensity.value && { backgroundColor: colors.primary }
-            ]}
-            onPress={() => updateFormData('intensity', intensity.value)}
-          >
-            <View style={styles.optionContent}>
-              <Text style={[
-                styles.optionTitle,
-                { color: formData.intensity === intensity.value ? 'white' : colors.text }
-              ]}>
-                {intensity.label}
-              </Text>
-              <Text style={[
-                styles.optionDescription,
-                { color: formData.intensity === intensity.value ? 'rgba(255,255,255,0.8)' : colors.textSecondary }
-              ]}>
-                {intensity.description}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
+             {formData.objective === 'maintain' ? (
+         <View style={styles.inputGroup}>
+           <Text style={[styles.inputLabel, { color: colors.text }]}>Mantener Peso</Text>
+           <TouchableOpacity
+             style={[
+               styles.optionButton,
+               { backgroundColor: colors.primary }
+             ]}
+             onPress={() => updateFormData('intensity', 'maintain')}
+           >
+             <View style={styles.optionContent}>
+               <Text style={[
+                 styles.optionTitle,
+                 { color: 'white' }
+               ]}>
+                 Mantener mi peso
+               </Text>
+               <Text style={[
+                 styles.optionDescription,
+                 { color: 'rgba(255,255,255,0.8)' }
+               ]}>
+                 Sin agregar calorías adicionales
+               </Text>
+             </View>
+           </TouchableOpacity>
+         </View>
+       ) : (
+         <View style={styles.inputGroup}>
+           <Text style={[styles.inputLabel, { color: colors.text }]}>Intensidad</Text>
+           {intensityOptions.map((intensity) => (
+             <TouchableOpacity
+               key={intensity.value}
+               style={[
+                 styles.optionButton,
+                 formData.intensity === intensity.value && { backgroundColor: colors.primary }
+               ]}
+               onPress={() => updateFormData('intensity', intensity.value)}
+             >
+               <View style={styles.optionContent}>
+                 <Text style={[
+                   styles.optionTitle,
+                   { color: formData.intensity === intensity.value ? 'white' : colors.text }
+                 ]}>
+                   {intensity.label}
+                 </Text>
+                 <Text style={[
+                   styles.optionDescription,
+                   { color: formData.intensity === intensity.value ? 'rgba(255,255,255,0.8)' : colors.textSecondary }
+                 ]}>
+                   {intensity.description}
+                 </Text>
+               </View>
+             </TouchableOpacity>
+           ))}
+         </View>
+       )}
+
+       {/* Navigation Buttons for Step 2 */}
+       <View style={styles.step2NavigationContainer}>
+         <TouchableOpacity
+           style={[styles.navButton, styles.backButton, { 
+             borderColor: colors.border,
+             backgroundColor: colors.card 
+           }]}
+           onPress={handleBack}
+         >
+           <Ionicons name="arrow-back" size={20} color={colors.text} />
+           <Text style={[styles.navButtonText, { color: colors.text }]}>Atrás</Text>
+         </TouchableOpacity>
+         
+         <TouchableOpacity
+           style={[styles.navButton, styles.nextButton, { backgroundColor: colors.primary }]}
+           onPress={handleNext}
+         >
+           <Text style={styles.nextButtonText}>
+             Siguiente
+           </Text>
+           <Ionicons name="arrow-forward" size={20} color="white" />
+         </TouchableOpacity>
+       </View>
+     </View>
+   );
 
   const renderStep3 = () => (
     <View style={styles.stepContainer}>
@@ -522,21 +628,21 @@ const NutritionSetupScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: appColors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, { backgroundColor: appColors.grayLight }]}>
+        <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
           <View 
             style={[
               styles.progressFill, 
               { 
-                backgroundColor: appColors.primary,
+                backgroundColor: colors.primary,
                 width: `${(step / steps.length) * 100}%`
               }
             ]} 
           />
         </View>
-        <Text style={[styles.progressText, { color: appColors.gray }]}>
+        <Text style={[styles.progressText, { color: colors.textSecondary }]}>
           Paso {step} de {steps.length}
         </Text>
       </View>
@@ -545,28 +651,31 @@ const NutritionSetupScreen: React.FC = () => {
         {renderCurrentStep()}
       </ScrollView>
 
-      {/* Navigation Buttons */}
-      <View style={styles.navigationContainer}>
-        {step > 1 && (
-                  <TouchableOpacity
-          style={[styles.navButton, styles.backButton, { borderColor: appColors.grayLight }]}
-          onPress={handleBack}
-        >
-          <Ionicons name="arrow-back" size={20} color={appColors.secondary} />
-          <Text style={[styles.navButtonText, { color: appColors.secondary }]}>Atrás</Text>
-        </TouchableOpacity>
-      )}
-      
-      <TouchableOpacity
-        style={[styles.navButton, styles.nextButton, { backgroundColor: appColors.primary }]}
-        onPress={handleNext}
-      >
-        <Text style={styles.nextButtonText}>
-          {step === steps.length ? 'Finalizar' : 'Siguiente'}
-        </Text>
-        <Ionicons name="arrow-forward" size={20} color="white" />
-      </TouchableOpacity>
-      </View>
+             {/* Navigation Buttons - Only for steps 3-4 */}
+       {step > 2 && !isKeyboardVisible && (
+         <View style={[styles.navigationContainer, { backgroundColor: colors.background }]}>
+           <TouchableOpacity
+             style={[styles.navButton, styles.backButton, { 
+               borderColor: colors.border,
+               backgroundColor: colors.card 
+             }]}
+             onPress={handleBack}
+           >
+             <Ionicons name="arrow-back" size={20} color={colors.text} />
+             <Text style={[styles.navButtonText, { color: colors.text }]}>Atrás</Text>
+           </TouchableOpacity>
+           
+           <TouchableOpacity
+             style={[styles.navButton, styles.nextButton, { backgroundColor: colors.primary }]}
+             onPress={handleNext}
+           >
+             <Text style={styles.nextButtonText}>
+               {step === steps.length ? 'Finalizar' : 'Siguiente'}
+             </Text>
+             <Ionicons name="arrow-forward" size={20} color="white" />
+           </TouchableOpacity>
+         </View>
+       )}
     </SafeAreaView>
   );
 };
@@ -633,7 +742,7 @@ const styles = StyleSheet.create({
     padding: 16, // Más padding
     borderRadius: 12, // Bordes más redondeados
     borderWidth: 2, // Borde más grueso
-    borderColor: '#ddd',
+    borderColor: '#333', // Color más oscuro para el tema oscuro
     alignItems: 'center',
     minHeight: 50, // Altura mínima para mejor touch target
   },
@@ -645,7 +754,7 @@ const styles = StyleSheet.create({
     padding: 18, // Más padding
     borderRadius: 12, // Bordes más redondeados
     borderWidth: 2, // Borde más grueso
-    borderColor: '#ddd',
+    borderColor: '#333', // Color más oscuro para el tema oscuro
     marginBottom: 12, // Más espacio entre opciones
     minHeight: 60, // Altura mínima para mejor touch target
   },
@@ -676,7 +785,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#333', // Color más oscuro para el tema oscuro
   },
   macroLabel: {
     fontSize: 16,
@@ -710,21 +819,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 8,
   },
-  navigationContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    paddingBottom: 30, // Más espacio arriba de la barra de navegación
-    gap: 12,
-    backgroundColor: 'white', // Fondo blanco para separar visualmente
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    elevation: 8, // Sombra en Android
-    shadowColor: '#000', // Sombra en iOS
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
+     step2NavigationContainer: {
+     flexDirection: 'row',
+     paddingHorizontal: 16,
+     paddingVertical: 20,
+     paddingBottom: 100, // Más espacio para la barra de navegación
+     gap: 12,
+     marginTop: 20,
+   },
+   navigationContainer: {
+     flexDirection: 'row',
+     paddingHorizontal: 16,
+     paddingVertical: 20,
+     paddingBottom: 30, // Más espacio arriba de la barra de navegación
+     gap: 12,
+     borderTopWidth: 1,
+     borderTopColor: '#333', // Color más oscuro para el tema oscuro
+     elevation: 8, // Sombra en Android
+     shadowColor: '#000', // Sombra en iOS
+     shadowOffset: { width: 0, height: -2 },
+     shadowOpacity: 0.1,
+     shadowRadius: 4,
+   },
   navButton: {
     flex: 1,
     flexDirection: 'row',
@@ -738,7 +854,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     borderWidth: 2, // Borde más grueso
-    backgroundColor: '#f8f9fa', // Fondo gris claro
   },
   nextButton: {
     flex: 2,

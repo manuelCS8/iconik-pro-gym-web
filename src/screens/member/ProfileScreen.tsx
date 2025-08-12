@@ -21,7 +21,11 @@ import { logout } from "../../redux/slices/authSlice";
 import { useNavigation } from '@react-navigation/native';
 import WeightChart from "../../components/WeightChart";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-// import { VictoryChart, VictoryBar, VictoryAxis } from "victory-native";
+import trainingHistoryService from "../../services/trainingHistoryService";
+import nutritionDataService, { NutritionData } from "../../services/nutritionDataService";
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import * as SQLite from 'expo-sqlite';
 
 const windowWidth = Dimensions.get("window").width;
 
@@ -42,6 +46,18 @@ const ProfileScreen: React.FC = () => {
   const { uid, email, user, role } = useSelector((state: RootState) => state.auth);
   const insets = useSafeAreaInsets();
 
+  // Estado para el número de entrenamientos
+  const [trainingCount, setTrainingCount] = useState(0);
+  
+  // Estados para foto de perfil y cumpleaños
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [showBirthdayModal, setShowBirthdayModal] = useState(false);
+  const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null);
+
+  // Estados para datos nutricionales
+  const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
+  const [hasNutritionData, setHasNutritionData] = useState(false);
+
   // Función para generar nombre de usuario basado en el correo
   const generateUsername = (email: string) => {
     if (!email) return "usuario";
@@ -56,13 +72,252 @@ const ProfileScreen: React.FC = () => {
     return cleanUsername + '_' + Math.abs(hash % 100);
   };
 
+  // Inicializar base de datos local
+  useEffect(() => {
+    const initDatabase = async () => {
+      try {
+        const database = await SQLite.openDatabaseAsync('user_profile.db');
+        setDb(database);
+        
+        // Crear tabla para datos del perfil
+        await database.execAsync(`
+          CREATE TABLE IF NOT EXISTS user_profile (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId TEXT UNIQUE,
+            name TEXT,
+            bio TEXT,
+            profileImage TEXT,
+            gender TEXT,
+            birthday TEXT,
+            weight REAL,
+            height REAL,
+            age INTEGER,
+            lastBirthdayCheck TEXT
+          );
+        `);
+        
+        // Cargar datos del perfil
+        await loadProfileData();
+        
+        // Inicializar y cargar datos nutricionales
+        await nutritionDataService.initialize();
+        await loadNutritionData();
+      } catch (error) {
+        console.error('Error inicializando base de datos:', error);
+      }
+    };
+    
+    initDatabase();
+  }, []);
+
+  // Función para cargar datos del perfil
+  const loadProfileData = async () => {
+    if (!db || !uid) return;
+    
+    try {
+      const result = await db.getAllAsync(
+        'SELECT * FROM user_profile WHERE userId = ?',
+        [uid]
+      );
+      
+      if (result.length > 0) {
+        const profileData = result[0];
+        setProfileImage(profileData.profileImage);
+        setProfile({
+          ...profile,
+          name: profileData.name || profile.name,
+          bio: profileData.bio || profile.bio,
+          gender: profileData.gender || user?.gender || profile.gender,
+          birthday: profileData.birthday || user?.birthday || profile.birthday,
+          weight: profileData.weight || user?.weight,
+          height: profileData.height || user?.height,
+          age: profileData.age || user?.age,
+        });
+      } else {
+        // Crear registro inicial
+        await saveProfileData();
+      }
+    } catch (error) {
+      console.error('Error cargando datos del perfil:', error);
+    }
+  };
+
+  // Función para guardar datos del perfil
+  const saveProfileData = async () => {
+    if (!db || !uid) return;
+    
+    try {
+      await db.runAsync(
+        `INSERT OR REPLACE INTO user_profile 
+         (userId, name, bio, profileImage, gender, birthday, weight, height, age) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          uid,
+          profile.name,
+          profile.bio,
+          profileImage,
+          profile.gender,
+          profile.birthday,
+          profile.weight,
+          profile.height,
+          profile.age
+        ]
+      );
+    } catch (error) {
+      console.error('Error guardando datos del perfil:', error);
+    }
+  };
+
+  // Función para cargar datos nutricionales
+  const loadNutritionData = async () => {
+    if (!uid) return;
+    
+    try {
+      const data = await nutritionDataService.getNutritionData(uid);
+      if (data) {
+        setNutritionData(data);
+        setHasNutritionData(true);
+        
+        // Actualizar el perfil con los datos nutricionales si no están definidos
+        if (!profile.weight && data.weight) {
+          setProfile(prev => ({
+            ...prev,
+            weight: data.weight,
+            height: data.height,
+            age: data.age,
+            gender: data.gender === 'male' ? 'Hombre' : 'Mujer'
+          }));
+        }
+      } else {
+        setHasNutritionData(false);
+      }
+    } catch (error) {
+      console.error('Error cargando datos nutricionales:', error);
+      setHasNutritionData(false);
+    }
+  };
+
+  // Función para seleccionar foto de perfil
+  const selectProfileImage = async () => {
+    try {
+      // Solicitar permisos
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permisos requeridos', 'Necesitamos acceso a tu galería para seleccionar una foto.');
+        return;
+      }
+
+      // Abrir selector de imágenes
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1], // Cuadrado perfecto
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        
+        // Guardar imagen localmente
+        const fileName = `profile_${uid}_${Date.now()}.jpg`;
+        const destinationUri = `${FileSystem.documentDirectory}profile_images/${fileName}`;
+        
+        // Crear directorio si no existe
+        await FileSystem.makeDirectoryAsync(
+          `${FileSystem.documentDirectory}profile_images/`,
+          { intermediates: true }
+        );
+        
+        // Copiar imagen al directorio local
+        await FileSystem.copyAsync({
+          from: imageUri,
+          to: destinationUri
+        });
+        
+        setProfileImage(destinationUri);
+        await saveProfileData();
+      }
+    } catch (error) {
+      console.error('Error seleccionando imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen. Inténtalo de nuevo.');
+    }
+  };
+
+  // Función para verificar cumpleaños
+  const checkBirthday = async () => {
+    if (!db || !uid) return;
+    
+    try {
+      const result = await db.getAllAsync(
+        'SELECT birthday, lastBirthdayCheck FROM user_profile WHERE userId = ?',
+        [uid]
+      );
+      
+      if (result.length > 0) {
+        const { birthday, lastBirthdayCheck } = result[0];
+        
+        if (birthday) {
+          const today = new Date();
+          const birthdayDate = new Date(birthday);
+          const lastCheck = lastBirthdayCheck ? new Date(lastBirthdayCheck) : null;
+          
+          // Verificar si es cumpleaños y no se ha felicitado hoy
+          const isBirthday = 
+            today.getMonth() === birthdayDate.getMonth() && 
+            today.getDate() === birthdayDate.getDate();
+          
+          const alreadyCheckedToday = lastCheck && 
+            lastCheck.getDate() === today.getDate() && 
+            lastCheck.getMonth() === today.getMonth() && 
+            lastCheck.getFullYear() === today.getFullYear();
+          
+          if (isBirthday && !alreadyCheckedToday) {
+            setShowBirthdayModal(true);
+            
+            // Marcar como felicitado hoy
+            await db.runAsync(
+              'UPDATE user_profile SET lastBirthdayCheck = ? WHERE userId = ?',
+              [today.toISOString(), uid]
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error verificando cumpleaños:', error);
+    }
+  };
+
+  // Verificar cumpleaños cuando se enfoca la pantalla
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadTrainingCount();
+      checkBirthday();
+      loadNutritionData();
+    });
+
+    return unsubscribe;
+  }, [navigation, uid, db]);
+
+  // Función para cargar el número de entrenamientos
+  const loadTrainingCount = async () => {
+    if (!uid) return;
+    
+    try {
+      const sessions = await trainingHistoryService.getTrainingSessions(uid);
+      setTrainingCount(sessions.length);
+    } catch (error) {
+      console.log('Error cargando número de entrenamientos:', error);
+      setTrainingCount(0);
+    }
+  };
+
   // Estados para el perfil
   const [profile, setProfile] = useState<UserProfile>({
     name: user?.name || "Emmanuel Castro Salvador",
     bio: "Sobre carga progresiva, pesado y al fallo, pre entreno después de entrenar",
-    profileImage: "https://via.placeholder.com/150",
-    gender: "Hombre",
-    birthday: "abr 27, 2005",
+    profileImage: profileImage || "https://via.placeholder.com/150",
+    gender: user?.gender || "Hombre",
+    birthday: user?.birthday || "abr 27, 2005",
     weight: user?.weight,
     height: user?.height,
     age: user?.age,
@@ -100,19 +355,33 @@ const ProfileScreen: React.FC = () => {
     { month: "may 25", hours: 5 },
   ];
 
-  const saveProfile = () => {
-    setProfile({
+  const saveProfile = async () => {
+    const updatedProfile = {
       ...profile,
       name: editName,
       bio: editBio,
       gender: editGender,
       birthday: editBirthday,
-    });
+    };
+    
+    setProfile(updatedProfile);
     setShowEditModal(false);
-    Alert.alert("✅ Perfil actualizado", "Los cambios se han guardado correctamente.");
+    
+    // Guardar en base de datos local
+    await saveProfileData();
+    
+    // Actualizar en Redux si es necesario
+    if (user) {
+      dispatch(setUser({
+        ...user,
+        name: editName,
+        gender: editGender,
+        birthday: editBirthday,
+      }));
+    }
   };
 
-  const saveMeasurements = () => {
+  const saveMeasurements = async () => {
     const w = parseFloat(weightInput);
     const h = parseFloat(heightInput);
     const a = parseInt(ageInput);
@@ -132,6 +401,25 @@ const ProfileScreen: React.FC = () => {
 
     setProfile({ ...profile, weight: w, height: h, age: a });
     setShowMeasurementsModal(false);
+    
+    // Guardar en base de datos local
+    await saveProfileData();
+    
+    // Si hay datos nutricionales, actualizarlos también
+    if (nutritionData && uid) {
+      try {
+        await nutritionDataService.updateNutritionData(uid, {
+          weight: w,
+          height: h,
+          age: a
+        });
+        // Recargar datos nutricionales
+        await loadNutritionData();
+      } catch (error) {
+        console.error('Error actualizando datos nutricionales:', error);
+      }
+    }
+    
     Alert.alert("✅ Medidas guardadas", "Las medidas se han actualizado correctamente.");
   };
 
@@ -189,26 +477,20 @@ const ProfileScreen: React.FC = () => {
 
       {/* Forzar que el ScrollView no tenga espacio extra al final */}
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 0, flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-        {/* Profile Info */}
+        {/* Profile Image and Info */}
         <View style={styles.profileSection}>
           <Image 
-            source={{ uri: profile.profileImage }} 
-            style={styles.profileImage}
+            source={{ 
+              uri: profileImage || profile.profileImage 
+            }} 
+            style={styles.profileImage} 
           />
           <Text style={styles.profileName}>{profile.name}</Text>
-          
+
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>139</Text>
+              <Text style={styles.statNumber}>{trainingCount}</Text>
               <Text style={styles.statLabel}>Entrenos</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>0</Text>
-              <Text style={styles.statLabel}>Seguidores</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>1</Text>
-              <Text style={styles.statLabel}>Siguiendo</Text>
             </View>
           </View>
           
@@ -220,13 +502,13 @@ const ProfileScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Información</Text>
           
           <View style={styles.actionGrid}>
-                         <TouchableOpacity 
-               style={styles.actionButton}
-               onPress={() => setShowStatsModal(true)}
-             >
-               <Ionicons name="bar-chart-outline" size={24} color="#fff" />
-               <Text style={styles.actionText}>Estadísticas</Text>
-             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('TrainingHistoryStack' as never)}
+            >
+              <Ionicons name="list-outline" size={24} color="#fff" />
+              <Text style={styles.actionText}>Detalles de Entrenamientos</Text>
+            </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.actionButton}
@@ -249,10 +531,31 @@ const ProfileScreen: React.FC = () => {
               <Text style={styles.actionText}>Medidas</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionButton}>
-              <Ionicons name="calendar-outline" size={24} color="#fff" />
-              <Text style={styles.actionText}>Calendario</Text>
-            </TouchableOpacity>
+            {!hasNutritionData ? (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.nutritionButton]}
+                onPress={() => {
+                  // Navegar al tab de Nutrición y luego a la pantalla de configuración
+                  navigation.navigate('NutricionTab' as never, {
+                    screen: 'NutritionSetup'
+                  } as never);
+                }}
+              >
+                <Ionicons name="nutrition-outline" size={24} color="#E31C1F" />
+                <Text style={[styles.actionText, styles.nutritionText]}>Configurar Nutrición</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => {
+                  // Navegar al tab de Nutrición
+                  navigation.navigate('NutricionTab' as never);
+                }}
+              >
+                <Ionicons name="nutrition-outline" size={24} color="#fff" />
+                <Text style={styles.actionText}>Nutrición</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -276,8 +579,13 @@ const ProfileScreen: React.FC = () => {
           
           <ScrollView style={styles.modalContent}>
             <View style={styles.photoSection}>
-              <Image source={{ uri: profile.profileImage }} style={styles.editProfileImage} />
-              <TouchableOpacity>
+              <Image 
+                source={{ 
+                  uri: profileImage || profile.profileImage 
+                }} 
+                style={styles.editProfileImage} 
+              />
+              <TouchableOpacity onPress={selectProfileImage}>
                 <Text style={styles.changePhotoText}>Cambiar Foto</Text>
               </TouchableOpacity>
             </View>
@@ -433,6 +741,44 @@ const ProfileScreen: React.FC = () => {
                 <Text style={styles.currentMeasuresText}>Peso: {profile.weight} kg</Text>
                 <Text style={styles.currentMeasuresText}>Altura: {profile.height} cm</Text>
                 <Text style={styles.currentMeasuresText}>Edad: {profile.age} años</Text>
+                
+                {/* Mostrar información nutricional si está disponible */}
+                {nutritionData && (
+                  <>
+                    <Text style={styles.currentMeasuresTitle}>Datos Nutricionales:</Text>
+                    <Text style={styles.currentMeasuresText}>
+                      Género: {nutritionData.gender === 'male' ? 'Hombre' : 'Mujer'}
+                    </Text>
+                    <Text style={styles.currentMeasuresText}>
+                      Nivel de actividad: {nutritionData.activityLevel}
+                    </Text>
+                    <Text style={styles.currentMeasuresText}>
+                      Objetivo: {nutritionData.objective === 'lose' ? 'Perder peso' : 
+                                nutritionData.objective === 'gain' ? 'Ganar peso' : 'Mantener peso'}
+                    </Text>
+                    <Text style={styles.currentMeasuresText}>
+                      Intensidad: {nutritionData.intensity}
+                    </Text>
+                    {nutritionData.targetWeight && (
+                      <Text style={styles.currentMeasuresText}>
+                        Peso objetivo: {nutritionData.targetWeight} kg
+                      </Text>
+                    )}
+                    <Text style={styles.currentMeasuresTitle}>Macros Diarios:</Text>
+                    <Text style={styles.currentMeasuresText}>
+                      Calorías: {nutritionData.calories} kcal
+                    </Text>
+                    <Text style={styles.currentMeasuresText}>
+                      Proteína: {nutritionData.protein}g
+                    </Text>
+                    <Text style={styles.currentMeasuresText}>
+                      Carbohidratos: {nutritionData.carbs}g
+                    </Text>
+                    <Text style={styles.currentMeasuresText}>
+                      Grasas: {nutritionData.fats}g
+                    </Text>
+                  </>
+                )}
               </View>
             )}
           </ScrollView>
@@ -501,7 +847,7 @@ const ProfileScreen: React.FC = () => {
                <Text style={styles.statsCardTitle}>💪 Entrenamientos</Text>
                <View style={styles.statsMainRow}>
                  <View style={styles.statItem}>
-                   <Text style={styles.statValue}>139</Text>
+                   <Text style={styles.statValue}>{trainingCount}</Text>
                    <Text style={styles.statLabel}>Total Entrenos</Text>
                  </View>
                  <View style={styles.statItem}>
@@ -536,9 +882,38 @@ const ProfileScreen: React.FC = () => {
            </ScrollView>
          </SafeAreaView>
        </Modal>
-     </SafeAreaView>
-   );
- };
+
+      {/* Birthday Modal */}
+      <Modal
+        visible={showBirthdayModal}
+        animationType="fade"
+        transparent={true}
+      >
+        <View style={styles.birthdayOverlay}>
+          <View style={styles.birthdayModal}>
+            <View style={styles.birthdayIconContainer}>
+              <Ionicons name="gift" size={60} color="#E31C1F" />
+            </View>
+            
+            <Text style={styles.birthdayTitle}>¡Feliz Cumpleaños!</Text>
+            <Text style={styles.birthdaySubtitle}>{profile.name}</Text>
+            
+            <Text style={styles.birthdayMessage}>
+              "Que este nuevo año de vida te traiga fuerza, determinación y éxitos en todos tus entrenamientos. ¡Sigue persiguiendo tus metas con pasión!"
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.birthdayButton}
+              onPress={() => setShowBirthdayModal(false)}
+            >
+              <Text style={styles.birthdayButtonText}>¡Gracias!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -586,7 +961,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     width: '100%',
     marginBottom: 16,
   },
@@ -636,6 +1011,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
   },
+  nutritionButton: {
+    borderWidth: 2,
+    borderColor: '#E31C1F',
+  },
+  nutritionText: {
+    color: '#E31C1F',
+    fontSize: 14,
+    marginTop: 8,
+    fontWeight: 'bold',
+  },
   // Modal Styles
   modalContainer: {
     flex: 1,
@@ -660,7 +1045,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   modalSave: {
-    color: '#4A90E2',
+    color: '#E31C1F',
     fontSize: 16,
   },
   modalContent: {
@@ -678,7 +1063,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   changePhotoText: {
-    color: '#4A90E2',
+    color: '#E31C1F',
     fontSize: 16,
   },
   modalSectionTitle: {
@@ -707,7 +1092,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   inputValue: {
-    color: '#4A90E2',
+    color: '#E31C1F',
     fontSize: 16,
   },
   settingsOverlay: {
@@ -810,6 +1195,57 @@ const styles = StyleSheet.create({
    bmiCategory: {
      color: '#888',
      fontSize: 16,
+     fontWeight: 'bold',
+   },
+   birthdayOverlay: {
+     flex: 1,
+     backgroundColor: 'rgba(0,0,0,0.7)',
+     justifyContent: 'center',
+     alignItems: 'center',
+   },
+   birthdayModal: {
+     backgroundColor: '#333',
+     borderRadius: 16,
+     padding: 20,
+     alignItems: 'center',
+     width: '80%',
+   },
+   birthdayIconContainer: {
+     backgroundColor: '#fff',
+     borderRadius: 30,
+     width: 60,
+     height: 60,
+     justifyContent: 'center',
+     alignItems: 'center',
+     marginBottom: 15,
+   },
+   birthdayTitle: {
+     color: '#fff',
+     fontSize: 24,
+     fontWeight: 'bold',
+     marginBottom: 8,
+   },
+   birthdaySubtitle: {
+     color: '#fff',
+     fontSize: 18,
+     marginBottom: 15,
+   },
+   birthdayMessage: {
+     color: '#888',
+     fontSize: 16,
+     textAlign: 'center',
+     marginBottom: 20,
+     lineHeight: 22,
+   },
+   birthdayButton: {
+     backgroundColor: '#E31C1F',
+     borderRadius: 8,
+     paddingVertical: 12,
+     paddingHorizontal: 25,
+   },
+   birthdayButtonText: {
+     color: '#fff',
+     fontSize: 18,
      fontWeight: 'bold',
    },
 });

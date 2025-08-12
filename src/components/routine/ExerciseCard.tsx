@@ -36,7 +36,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
         
         <View style={styles.exerciseDetails}>
           <View style={styles.detailRow}>
-            <Ionicons name="repeat" size={16} color="#4ECDC4" />
+            <Ionicons name="repeat" size={18} color="#4ECDC4" />
             <Text style={styles.detailText}>
               {exercise.sets} series × {exercise.reps} repeticiones
             </Text>
@@ -44,7 +44,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
           
           {exercise.weight > 0 && (
             <View style={styles.detailRow}>
-              <Ionicons name="fitness" size={16} color="#FF6B6B" />
+              <Ionicons name="fitness" size={18} color="#FF6B6B" />
               <Text style={styles.detailText}>
                 {exercise.weight} kg
               </Text>
@@ -52,16 +52,19 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
           )}
           
           <View style={styles.detailRow}>
-            <Ionicons name="time" size={16} color="#96CEB4" />
+            <Ionicons name="time" size={18} color="#96CEB4" />
             <Text style={styles.detailText}>
               {formatTime(exercise.restTime)} descanso
             </Text>
           </View>
         </View>
         
-        {exercise.notes && (
+        {exercise.notes && exercise.notes.trim() && (
           <View style={styles.notesContainer}>
-            <Ionicons name="document-text" size={14} color="#999" />
+            <View style={styles.notesHeader}>
+              <Ionicons name="document-text" size={16} color="#E31C1F" />
+              <Text style={styles.notesLabel}>Notas:</Text>
+            </View>
             <Text style={styles.notesText}>{exercise.notes}</Text>
           </View>
         )}
@@ -72,14 +75,14 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
           style={styles.actionButton}
           onPress={() => onEdit(index, exercise)}
         >
-          <Ionicons name="pencil" size={18} color="#4ECDC4" />
+          <Ionicons name="pencil" size={20} color="#4ECDC4" />
         </TouchableOpacity>
         
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => onRemove(index)}
         >
-          <Ionicons name="trash" size={18} color="#E31C1F" />
+          <Ionicons name="trash" size={20} color="#E31C1F" />
         </TouchableOpacity>
       </View>
     </View>
@@ -89,14 +92,19 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#181818',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#333',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   exerciseInfo: {
     flex: 1,
@@ -104,60 +112,76 @@ const styles = StyleSheet.create({
   exerciseHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   exerciseNumber: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginRight: 8,
-    backgroundColor: 'rgba(227, 28, 31, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    marginRight: 10,
+    backgroundColor: 'rgba(227, 28, 31, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   exerciseName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#fff',
     flex: 1,
   },
   exerciseDetails: {
-    gap: 6,
+    gap: 8,
+    marginBottom: 12,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   detailText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#ccc',
+    fontWeight: '500',
   },
   notesContainer: {
+    backgroundColor: '#222',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#E31C1F',
+  },
+  notesHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 6,
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
+    marginBottom: 6,
+  },
+  notesLabel: {
+    fontSize: 14,
+    color: '#E31C1F',
+    fontWeight: 'bold',
   },
   notesText: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 14,
+    color: '#fff',
     fontStyle: 'italic',
-    flex: 1,
+    lineHeight: 20,
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
-    marginLeft: 12,
+    gap: 10,
+    marginLeft: 16,
   },
   actionButton: {
-    padding: 8,
-    borderRadius: 6,
+    padding: 10,
+    borderRadius: 8,
     backgroundColor: '#222',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
 });
 

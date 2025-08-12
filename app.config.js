@@ -9,7 +9,7 @@ export default {
       package: "com.iconikprogym.app"
     },
     extra: {
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      OPENAI_API_KEY: process.env.EXPO_PUBLIC_OPENAI_API_KEY,
       eas: {
         projectId: "53206c60-7c77-467d-8c33-878a04d8d9f2"
       }

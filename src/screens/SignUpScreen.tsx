@@ -7,7 +7,7 @@ export default function SignUpScreen({ navigation }) {
 
   const onSignUp = async () => {
     try {
-      // ... existing code ...
+   sigue    // ... existing code ...
     } catch (error: any) {
       Alert.alert("Error al registrarse", error.message);
     }

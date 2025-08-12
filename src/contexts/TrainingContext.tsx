@@ -9,6 +9,9 @@ interface TrainingContextType {
   currentTrainingScreen: string | null;
   setCurrentTrainingScreen: (screen: string | null) => void;
   clearTrainingProgress: () => void;
+  isTabBarVisible: boolean;
+  hideTabBar: () => void;
+  showTabBar: () => void;
 }
 
 const TrainingContext = createContext<TrainingContextType | undefined>(undefined);
@@ -29,6 +32,7 @@ export const TrainingProvider: React.FC<TrainingProviderProps> = ({ children }) 
   const [isTrainingInProgress, setIsTrainingInProgress] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentTrainingScreen, setCurrentTrainingScreen] = useState<string | null>(null);
+  const [isTabBarVisible, setIsTabBarVisible] = useState(true);
 
   const setTrainingInProgress = (inProgress: boolean) => {
     setIsTrainingInProgress(inProgress);
@@ -44,6 +48,14 @@ export const TrainingProvider: React.FC<TrainingProviderProps> = ({ children }) 
 
   const hideTrainingModal = () => {
     setIsModalVisible(false);
+  };
+
+  const hideTabBar = () => {
+    setIsTabBarVisible(false);
+  };
+
+  const showTabBar = () => {
+    setIsTabBarVisible(true);
   };
 
   // Función para limpiar completamente el entrenamiento
@@ -63,6 +75,9 @@ export const TrainingProvider: React.FC<TrainingProviderProps> = ({ children }) 
       currentTrainingScreen,
       setCurrentTrainingScreen,
       clearTrainingProgress,
+      isTabBarVisible,
+      hideTabBar,
+      showTabBar,
     }}>
       {children}
     </TrainingContext.Provider>

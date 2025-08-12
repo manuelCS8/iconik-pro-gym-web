@@ -26,6 +26,8 @@ export interface CreateUserRoutineData {
 }
 
 class UserRoutineService {
+  // ===== MÉTODOS PARA RUTINAS =====
+  
   // Crear rutina de usuario
   async createUserRoutine(userId: string, routineData: CreateUserRoutineData): Promise<string> {
     try {
@@ -158,6 +160,10 @@ class UserRoutineService {
     }
   }
 
+
+
+  // ===== MÉTODOS EXISTENTES PARA EJERCICIOS =====
+
   // Agregar ejercicio a rutina
   async addExerciseToRoutine(routineId: string, exercise: UserRoutineExercise): Promise<void> {
     try {
@@ -220,82 +226,6 @@ class UserRoutineService {
       }
     } catch (error: any) {
       console.error('Error actualizando ejercicio en rutina:', error);
-      throw error;
-    }
-  }
-
-  // Obtener categorías de rutinas
-  async getUserRoutineCategories(): Promise<string[]> {
-    try {
-      const routinesRef = collection(db, 'userRoutines');
-      const q = query(routinesRef, where('isActive', '==', true));
-      const querySnapshot = await getDocs(q);
-      
-      const categories = new Set<string>();
-      querySnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.category) {
-          categories.add(data.category);
-        }
-      });
-      
-      return Array.from(categories).sort();
-    } catch (error: any) {
-      console.error('Error obteniendo categorías de rutinas:', error);
-      throw error;
-    }
-  }
-
-  // Obtener rutinas por categoría
-  async getUserRoutinesByCategory(userId: string, category: string): Promise<UserRoutine[]> {
-    try {
-      const routinesRef = collection(db, 'userRoutines');
-      const q = query(
-        routinesRef, 
-        where('createdBy', '==', userId),
-        where('category', '==', category),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
-      
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date()
-        } as UserRoutine;
-      });
-    } catch (error: any) {
-      console.error('Error obteniendo rutinas por categoría:', error);
-      throw error;
-    }
-  }
-
-  // Obtener rutinas por dificultad
-  async getUserRoutinesByDifficulty(userId: string, difficulty: string): Promise<UserRoutine[]> {
-    try {
-      const routinesRef = collection(db, 'userRoutines');
-      const q = query(
-        routinesRef, 
-        where('createdBy', '==', userId),
-        where('difficulty', '==', difficulty),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
-      
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date()
-        } as UserRoutine;
-      });
-    } catch (error: any) {
-      console.error('Error obteniendo rutinas por dificultad:', error);
       throw error;
     }
   }

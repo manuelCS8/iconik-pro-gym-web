@@ -9,9 +9,12 @@ import ConfigureExerciseScreen from "../screens/member/ConfigureExerciseScreen";
 import RoutineDetail from "../screens/member/RoutineDetail";
 import RoutineDetailScreen from "../screens/member/RoutineDetailScreen";
 import TrainingSessionScreen from "../screens/member/TrainingSessionScreen";
+import TrainingSummaryScreen from "../screens/member/TrainingSummaryScreen";
+import TrainingSuccessScreen from "../screens/member/TrainingSuccessScreen";
 import ExercisesScreen from "../screens/member/ExercisesScreen";
 import ExerciseDetailScreen from "../screens/member/ExerciseDetailScreen";
 import ExerciseVideoScreen from "../screens/member/ExerciseVideoScreen";
+
 
 const Stack = createNativeStackNavigator();
 
@@ -63,6 +66,20 @@ const EntrenarStack = () => (
       }}
     />
     <Stack.Screen 
+      name="TrainingSummary" 
+      component={TrainingSummaryScreen}
+      options={{ 
+        headerShown: false
+      }}
+    />
+    <Stack.Screen 
+      name="TrainingSuccess" 
+      component={TrainingSuccessScreen}
+      options={{ 
+        headerShown: false
+      }}
+    />
+    <Stack.Screen 
       name="ExercisesList" 
       component={ExercisesScreen}
       options={{ 
@@ -87,6 +104,7 @@ const EntrenarStack = () => (
         headerShown: false
       }}
     />
+
   </Stack.Navigator>
 );
 

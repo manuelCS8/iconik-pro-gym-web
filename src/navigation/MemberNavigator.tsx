@@ -1,10 +1,14 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TouchableOpacity } from 'react-native';
 import EntrenarStack from './EntrenarStackNavigator';
 import HomeScreen from '../screens/member/HomeScreen';
 import ProfileScreen from '../screens/member/ProfileScreen';
 import NutritionStackNavigator from './NutritionStackNavigator';
+import TrainingHistoryStack from './TrainingHistoryStackNavigator';
+import TrainingDetailScreen from '../screens/member/TrainingDetailScreen';
+import EditRoutineScreen from '../screens/member/EditRoutineScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../utils/theme';
 import { useTraining } from '../contexts/TrainingContext';
@@ -16,7 +20,15 @@ export type MemberTabParamList = {
   PerfilTab: undefined;
 };
 
+export type MemberStackParamList = {
+  MainTabs: undefined;
+  TrainingHistoryStack: undefined;
+  TrainingDetail: { sessionId: string };
+  EditRoutine: { routineId: string };
+};
+
 const Tab = createBottomTabNavigator<MemberTabParamList>();
+const Stack = createNativeStackNavigator<MemberStackParamList>();
 
 // Componente personalizado para el tab de Entrenar
 const EntrenarTabComponent: React.FC = () => {
@@ -28,8 +40,9 @@ const NutritionTabComponent: React.FC = () => {
   return <NutritionStackNavigator />;
 };
 
-const MemberNavigator: React.FC = () => {
-  const { isTrainingInProgress, showTrainingModal } = useTraining();
+// Componente para los tabs principales
+const MainTabs: React.FC = () => {
+  const { isTrainingInProgress, showTrainingModal, isTabBarVisible } = useTraining();
 
   // Mostrar el modal cuando hay entrenamiento en progreso y el usuario navega
   React.useEffect(() => {
@@ -62,6 +75,7 @@ const MemberNavigator: React.FC = () => {
           right: 0,
           elevation: 0, // Android
           shadowOpacity: 0, // iOS
+          display: isTabBarVisible ? 'flex' : 'none', // Ocultar/mostrar la barra
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -123,6 +137,17 @@ const MemberNavigator: React.FC = () => {
         }}
       />
     </Tab.Navigator>
+  );
+};
+
+const MemberNavigator: React.FC = () => {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="TrainingHistoryStack" component={TrainingHistoryStack} />
+      <Stack.Screen name="TrainingDetail" component={TrainingDetailScreen} />
+      <Stack.Screen name="EditRoutine" component={EditRoutineScreen} />
+    </Stack.Navigator>
   );
 };
 

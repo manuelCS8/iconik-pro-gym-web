@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector, useDispatch } from "react-redux";
@@ -14,7 +15,7 @@ import { RootState } from "../../redux/store";
 import { Ionicons, Entypo } from "@expo/vector-icons";
 import { COLORS, SIZES } from "../../utils/theme";
 import ArtisticBackground from "../../components/ArtisticBackground";
-import { setRoutines, setLoading, setError } from "../../redux/slices/userRoutinesSlice";
+import { setRoutines, setLoading, setError, deleteRoutine } from "../../redux/slices/userRoutinesSlice";
 import userRoutineService from "../../services/userRoutineService";
 
 const EntrenarHomeScreen: React.FC = () => {
@@ -48,7 +49,9 @@ const EntrenarHomeScreen: React.FC = () => {
     dispatch(setLoading(true));
     try {
       const userRoutines = await userRoutineService.getUserRoutines(uid);
-      console.log('✅ Rutinas cargadas:', userRoutines.length, userRoutines);
+      
+      console.log('✅ Rutinas cargadas:', userRoutines.length);
+      
       dispatch(setRoutines(userRoutines));
     } catch (error: any) {
       console.error('❌ Error loading user routines:', error);
@@ -57,6 +60,49 @@ const EntrenarHomeScreen: React.FC = () => {
       dispatch(setLoading(false));
     }
   };
+
+  const handleDeleteRoutine = async (routineId: string, routineName: string) => {
+    Alert.alert(
+      "Eliminar Rutina",
+      `¿Estás seguro de que quieres eliminar la rutina "${routineName}"?\n\nEsta acción no se puede deshacer.`,
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              dispatch(setLoading(true));
+              await userRoutineService.deleteUserRoutine(routineId);
+              
+              // Actualizar el estado local
+              dispatch(deleteRoutine(routineId));
+              
+              Alert.alert(
+                "✅ Rutina Eliminada",
+                `La rutina "${routineName}" ha sido eliminada exitosamente.`
+              );
+              
+              console.log('✅ Rutina eliminada:', routineName);
+            } catch (error: any) {
+              console.error('❌ Error eliminando rutina:', error);
+              Alert.alert(
+                "Error",
+                "No se pudo eliminar la rutina. Por favor, inténtalo de nuevo."
+              );
+            } finally {
+              dispatch(setLoading(false));
+            }
+          }
+        }
+      ]
+    );
+  };
+
+
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -87,6 +133,8 @@ const EntrenarHomeScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
+
+
         {/* Rutinas del usuario desplegables */}
         <TouchableOpacity
           style={styles.dropdownHeader}
@@ -99,44 +147,64 @@ const EntrenarHomeScreen: React.FC = () => {
             style={{ marginRight: 6 }}
           />
           <Text style={styles.dropdownHeaderText}>
-            Mis rutinas {routines.length > 0 ? `(${routines.length})` : ""}
+            Mis Rutinas ({routines.length})
           </Text>
         </TouchableOpacity>
 
         {showRoutines && (
           <View style={{ width: "100%" }}>
-
-            
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
                 <Text style={styles.loadingText}>Cargando rutinas...</Text>
               </View>
             ) : routines.length === 0 ? (
-              <Text style={styles.noRoutinesText}>No tienes rutinas creadas</Text>
+              <Text style={styles.noRoutinesText}>
+                No tienes rutinas creadas
+              </Text>
             ) : (
-              routines.map((rutina) => (
-                <View style={styles.rutinaCard} key={rutina.id}>
-                  <View style={styles.rutinaCardHeader}>
-                    <View style={styles.rutinaInfo}>
-                      <Text style={styles.rutinaCardTitle}>{rutina.name}</Text>
-                      <Text style={styles.rutinaCardSubtitle}>
-                        {rutina.category} • {rutina.difficulty} • {rutina.duration}min
-                      </Text>
-                    </View>
-                    <Entypo name="dots-three-horizontal" size={20} color="#fff" />
-                  </View>
-                  <TouchableOpacity
-                    style={styles.rutinaStartButton}
-                    onPress={() => navigation.navigate("RoutineDetail", { 
-                      routineId: rutina.id,
-                      isUserRoutine: true 
-                    })}
-                  >
-                    <Text style={styles.rutinaStartButtonText}>Empezar Rutina</Text>
-                  </TouchableOpacity>
-                </View>
-              ))
+                             routines.map((rutina) => (
+                 <View style={styles.rutinaCard} key={rutina.id}>
+                   <View style={styles.rutinaCardHeader}>
+                     <View style={styles.rutinaInfo}>
+                       <Text style={styles.rutinaCardTitle}>{rutina.name}</Text>
+                       <Text style={styles.rutinaCardSubtitle}>
+                         {rutina.category} • {rutina.difficulty} • {rutina.duration}min
+                       </Text>
+                     </View>
+                     <TouchableOpacity
+                       onPress={() => {
+                         Alert.alert(
+                           "Opciones de Rutina",
+                           "Selecciona una opción:",
+                           [
+                             {
+                               text: "Eliminar Rutina",
+                               style: "destructive",
+                               onPress: () => handleDeleteRoutine(rutina.id!, rutina.name)
+                             },
+                             {
+                               text: "Cancelar",
+                               style: "cancel"
+                             }
+                           ]
+                         );
+                       }}
+                     >
+                       <Entypo name="dots-three-horizontal" size={20} color="#fff" />
+                     </TouchableOpacity>
+                   </View>
+                   <TouchableOpacity
+                     style={styles.rutinaStartButton}
+                     onPress={() => navigation.navigate("RoutineDetail", { 
+                       routineId: rutina.id,
+                       isUserRoutine: true 
+                     })}
+                   >
+                     <Text style={styles.rutinaStartButtonText}>Empezar Rutina</Text>
+                   </TouchableOpacity>
+                 </View>
+               ))
             )}
           </View>
         )}
@@ -148,8 +216,6 @@ const EntrenarHomeScreen: React.FC = () => {
         >
           <Text style={styles.addTrainingButtonText}>Agregar Entrenamiento</Text>
         </TouchableOpacity>
-
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -320,5 +386,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
+
 
 }); 

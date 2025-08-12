@@ -64,6 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: profile.email,
           role: profile.role?.toUpperCase(),
           membershipEnd: profile.membershipEnd ? profile.membershipEnd.toISOString() : null, // <-- serializable
+          name: profile.displayName, // Agregar el nombre del usuario
           weight: profile.weight,
           height: profile.height,
           age: profile.age,

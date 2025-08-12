@@ -47,27 +47,27 @@ interface Exercise {
 // Opciones para filtros
 const muscleGroups = [
   { id: "all", name: "Todos los músculos" },
-  { id: "pecho", name: "Pecho" },
-  { id: "espalda", name: "Espalda" },
-  { id: "piernas", name: "Piernas" },
-  { id: "hombros", name: "Hombros" },
-  { id: "brazos", name: "Brazos" },
-  { id: "core", name: "Core" },
-  { id: "gluteos", name: "Glúteos" },
-  { id: "pantorrillas", name: "Pantorrillas" },
-  { id: "cardio", name: "Cardio" },
-  { id: "funcional", name: "Funcional" },
+  { id: "Pecho", name: "Pecho" },
+  { id: "Espalda", name: "Espalda" },
+  { id: "Piernas", name: "Piernas" },
+  { id: "Hombros", name: "Hombros" },
+  { id: "Brazos", name: "Brazos" },
+  { id: "Core", name: "Core" },
+  { id: "Glúteos", name: "Glúteos" },
+  { id: "Pantorrillas", name: "Pantorrillas" },
+  { id: "Cardio", name: "Cardio" },
+  { id: "Funcional", name: "Funcional" },
   // Agregando grupos musculares adicionales basados en la imagen
-  { id: "abdominales", name: "Abdominales" },
-  { id: "abductores", name: "Abductores" },
-  { id: "antebrazos", name: "Antebrazos" },
-  { id: "biceps", name: "Bíceps" },
-  { id: "cuadriceps", name: "Cuádriceps" },
-  { id: "dorsales", name: "Dorsales" },
-  { id: "isquiotibiales", name: "Isquiotibiales" },
-  { id: "lumbares", name: "Lumbares" },
-  { id: "trapecios", name: "Trapecios" },
-  { id: "triceps", name: "Tríceps" },
+  { id: "Abdominales", name: "Abdominales" },
+  { id: "Abductores", name: "Abductores" },
+  { id: "Antebrazos", name: "Antebrazos" },
+  { id: "Bíceps", name: "Bíceps" },
+  { id: "Cuádriceps", name: "Cuádriceps" },
+  { id: "Dorsales", name: "Dorsales" },
+  { id: "Isquiotibiales", name: "Isquiotibiales" },
+  { id: "Lumbares", name: "Lumbares" },
+  { id: "Trapecios", name: "Trapecios" },
+  { id: "Tríceps", name: "Tríceps" },
 ];
 
 const equipmentTypes = [
@@ -148,7 +148,7 @@ const ExercisesScreen: React.FC = () => {
           
           // Solo procesar ejercicios con nombre válido
           if (data.name && data.isActive !== false) {
-            exercisesFromFirestore.push({
+            const exercise = {
               id: docSnap.id,
               name: data.name || '',
               primaryMuscleGroups: Array.isArray(data.primaryMuscleGroups) 
@@ -165,9 +165,13 @@ const ExercisesScreen: React.FC = () => {
               mediaType: data.mediaType || '',
               mediaURL: data.mediaURL || '',
               thumbnailURL: data.thumbnailURL || '',
-        imageURL: data.imageURL || '',
+              imageURL: data.imageURL || '',
               isActive: true,
-            });
+            };
+            
+
+            
+            exercisesFromFirestore.push(exercise);
           }
         } catch (exerciseError) {
           console.error(`❌ Error procesando ejercicio ${index + 1}:`, exerciseError);
@@ -178,7 +182,26 @@ const ExercisesScreen: React.FC = () => {
       // Ordenar por nombre para mejor rendimiento
       exercisesFromFirestore.sort((a, b) => a.name.localeCompare(b.name));
       
+      // Debug: Log de ejercicios con media
+      console.log('🔍 DEBUG - Ejercicios con media:');
+      exercisesFromFirestore.slice(0, 5).forEach((exercise) => {
+        console.log(`📋 ${exercise.name}:`, {
+          mediaURL: exercise.mediaURL,
+          mediaType: exercise.mediaType,
+          hasMedia: !!exercise.mediaURL,
+          isLocal: exercise.mediaURL?.startsWith('file://'),
+          isFirebase: exercise.mediaURL?.startsWith('https://')
+        });
+      });
+      
       console.log(`✅ ${exercisesFromFirestore.length} ejercicios válidos procesados`);
+      
+      // Debug: Log de todos los músculos disponibles
+      const allMuscles = new Set<string>();
+      exercisesFromFirestore.forEach(exercise => {
+        exercise.primaryMuscleGroups?.forEach(muscle => allMuscles.add(muscle));
+      });
+      console.log('🏋️ Músculos disponibles en la base de datos:', Array.from(allMuscles));
       
       setExercises(exercisesFromFirestore);
       setFilteredExercises(exercisesFromFirestore);
@@ -208,17 +231,19 @@ const ExercisesScreen: React.FC = () => {
 
     // Filtro por músculo
     if (selectedMuscle !== 'all') {
-      filtered = filtered.filter(exercise =>
-        exercise.primaryMuscleGroups && exercise.primaryMuscleGroups.some(muscle => 
-          muscle.toLowerCase() === selectedMuscle
-        )
-      );
+      filtered = filtered.filter(exercise => {
+        if (!exercise.primaryMuscleGroups) return false;
+        
+        return exercise.primaryMuscleGroups.some(muscle => 
+          muscle === selectedMuscle
+        );
+      });
     }
 
     // Filtro por equipo
     if (selectedEquipment !== 'all') {
       filtered = filtered.filter(exercise =>
-        exercise.equipment.toLowerCase() === selectedEquipment
+        exercise.equipment.toLowerCase().includes(selectedEquipment.toLowerCase())
       );
     }
 
@@ -229,6 +254,18 @@ const ExercisesScreen: React.FC = () => {
       );
     }
 
+    // Debug: Log para ver qué ejercicios se están filtrando
+    if (selectedMuscle !== 'all') {
+      console.log(`🔍 Filtrando por músculo: ${selectedMuscle}`);
+      console.log(`📊 Ejercicios encontrados: ${filtered.length}`);
+      if (filtered.length > 0) {
+        console.log('📋 Primeros 3 ejercicios encontrados:');
+        filtered.slice(0, 3).forEach(exercise => {
+          console.log(`  - ${exercise.name}: ${exercise.primaryMuscleGroups?.join(', ')}`);
+        });
+      }
+    }
+    
     setFilteredExercises(filtered);
   };
 
@@ -373,36 +410,82 @@ const ExercisesScreen: React.FC = () => {
   };
 
   // Componente de video optimizado para evitar crashes
-  const ExerciseVideo = ({ mediaURL, mediaType }: { 
+  const ExerciseVideo = ({ mediaURL, mediaType, exerciseId }: { 
     mediaURL?: string; 
     mediaType?: string;
+    exerciseId: string;
   }) => {
-    // Solo mostrar video si es una URL pública de Firebase Storage
-    if (mediaType === 'video' && mediaURL && mediaURL.startsWith('https://')) {
+    const videoRef = useRef<any>(null);
+
+    // Mostrar video si es una URL válida
+    if (mediaType && (mediaType === 'video' || mediaType.startsWith('video/')) && mediaURL) {
       return (
         <View style={styles.videoContainer}>
           <Video
+            ref={videoRef}
             source={{ uri: mediaURL }}
             style={styles.exerciseVideo}
             resizeMode="cover"
-            shouldPlay={false} // No autoplay para evitar crashes
+            shouldPlay={true}
             isMuted={true}
-            isLooping={false}
-            useNativeControls={true}
+            isLooping={true}
+            useNativeControls={false}
             onError={(error) => {
               console.log(`❌ Error cargando video: ${mediaURL}`, error);
+              console.log(`🔍 MediaType: ${mediaType}, MediaURL: ${mediaURL}`);
+            }}
+            onLoad={() => {
+              console.log(`✅ Video cargado exitosamente: ${mediaURL}`);
+              console.log(`🔍 MediaType: ${mediaType}, MediaURL: ${mediaURL}`);
+            }}
+          />
+          {/* Overlay con icono de play para indicar que es un video */}
+          <View style={styles.videoOverlay}>
+            <Ionicons name="play-circle" size={30} color="#fff" />
+          </View>
+        </View>
+      );
+    }
+    
+    // Mostrar imagen si es una URL válida
+    if (mediaType && (mediaType === 'image' || mediaType.startsWith('image/')) && mediaURL) {
+      return (
+        <View style={styles.videoContainer}>
+          <Image
+            source={{ uri: mediaURL }}
+            style={styles.exerciseVideo}
+            resizeMode="cover"
+            onError={(error) => {
+              console.log(`❌ Error cargando imagen: ${mediaURL}`, error);
+              console.log(`🔍 MediaType: ${mediaType}, MediaURL: ${mediaURL}`);
+            }}
+            onLoad={() => {
+              console.log(`✅ Imagen cargada exitosamente: ${mediaURL}`);
+              console.log(`🔍 MediaType: ${mediaType}, MediaURL: ${mediaURL}`);
             }}
           />
         </View>
       );
     }
     
-    // Placeholder para videos locales o sin video
+    // Placeholder mejorado para videos locales o sin video
     return (
       <View style={styles.placeholderContainer}>
-        <Ionicons name="videocam" size={50} color={COLORS.gray} />
+        <View style={styles.placeholderIconContainer}>
+          {mediaType && (mediaType === 'video' || mediaType.startsWith('video/')) ? (
+            <Ionicons name="videocam" size={40} color="#666" />
+          ) : (
+            <Ionicons name="image" size={40} color="#666" />
+          )}
+        </View>
         <Text style={styles.placeholderText}>
-          {mediaURL && mediaURL.startsWith('file://') ? 'Video local' : 'Video disponible'}
+          {mediaURL && mediaURL.startsWith('file://') ? 'Media Local' : 'Media Disponible'}
+        </Text>
+        <Text style={styles.placeholderSubtext}>
+          {mediaType ? `Tipo: ${mediaType}` : 'Sin media configurado'}
+        </Text>
+        <Text style={styles.placeholderSubtext}>
+          {mediaURL ? `URL: ${mediaURL.substring(0, 30)}...` : 'Sin URL'}
         </Text>
       </View>
     );
@@ -416,6 +499,21 @@ const ExercisesScreen: React.FC = () => {
     }
     
     try {
+      // Determinar qué imagen mostrar con prioridad
+      let imageSource = null;
+      let imageType = 'none';
+      
+      if (item.imageURL && item.imageURL.startsWith('https://')) {
+        imageSource = item.imageURL;
+        imageType = 'imageURL';
+      } else if (item.mediaURL && item.mediaType === 'image' && item.mediaURL.startsWith('http')) {
+        imageSource = item.mediaURL;
+        imageType = 'mediaURL';
+      } else if (item.thumbnailURL && item.thumbnailURL.startsWith('http')) {
+        imageSource = item.thumbnailURL;
+        imageType = 'thumbnailURL';
+      }
+      
       return (
       <TouchableOpacity 
         style={[styles.card, onExerciseSelect && styles.cardSelectable]}
@@ -424,43 +522,46 @@ const ExercisesScreen: React.FC = () => {
       >
       {/* Video/Imagen del ejercicio */}
       <View style={styles.videoContainer}>
-              {item.imageURL && item.imageURL.startsWith('https://') ? (
-        // PRIORIDAD 1: Imagen migrada a Firebase Storage
-        <Image
-          source={{ uri: item.imageURL }}
-          style={styles.exerciseImage}
-          resizeMode="cover"
-          onError={() => {
-            console.log(`❌ Error cargando imagen migrada para ejercicio: ${item.name}`);
-          }}
-        />
-      ) : item.mediaURL && item.mediaType === 'image' && item.mediaURL.startsWith('http') ? (
-        // PRIORIDAD 2: Imagen real subida por el admin
-        <Image
-          source={{ uri: item.mediaURL }}
-          style={styles.exerciseImage}
-          resizeMode="cover"
-          onError={() => {
-            console.log(`❌ Error cargando imagen para ejercicio: ${item.name}`);
-          }}
-        />
-      ) : item.thumbnailURL && item.thumbnailURL.startsWith('http') ? (
-        // PRIORIDAD 3: Thumbnail específico subido por el admin
-        <Image
-          source={{ uri: item.thumbnailURL }}
-          style={styles.exerciseImage}
-          resizeMode="cover"
-          onError={() => {
-            console.log(`❌ Error cargando thumbnail para ejercicio: ${item.name}`);
-          }}
-        />
-      ) : (
-        // PRIORIDAD 4: Video del ejercicio (igual que en ExerciseDetailScreen)
-        <ExerciseVideo 
-          mediaURL={item.mediaURL}
-          mediaType={item.mediaType}
-        />
-      )}
+        {imageSource ? (
+          // Mostrar imagen si tenemos una URL válida
+          <Image
+            source={{ uri: imageSource }}
+            style={styles.exerciseImage}
+            resizeMode="cover"
+            onError={() => {
+              console.log(`❌ Error cargando imagen (${imageType}) para ejercicio: ${item.name}`);
+            }}
+            onLoad={() => {
+              console.log(`✅ Imagen cargada (${imageType}) para ejercicio: ${item.name}`);
+            }}
+          />
+        ) : item.mediaURL && item.mediaType && (item.mediaType === 'video' || item.mediaType.startsWith('video/')) ? (
+          // Mostrar video si no hay imagen pero hay video
+          <ExerciseVideo 
+            mediaURL={item.mediaURL}
+            mediaType={item.mediaType}
+            exerciseId={item.id}
+          />
+        ) : (
+          // Placeholder con icono y color según el tipo de ejercicio
+          <View style={styles.placeholderContainer}>
+            <View style={[
+              styles.placeholderIconContainer, 
+              { backgroundColor: getExerciseThumbnail(item.name, item.primaryMuscleGroups).backgroundColor }
+            ]}>
+              <Ionicons 
+                name={getExerciseThumbnail(item.name, item.primaryMuscleGroups).icon as any} 
+                size={40} 
+                color={getExerciseThumbnail(item.name, item.primaryMuscleGroups).color} 
+              />
+            </View>
+            <Text style={styles.placeholderText}>
+              {item.primaryMuscleGroups && item.primaryMuscleGroups.length > 0 
+                ? item.primaryMuscleGroups[0] 
+                : 'Ejercicio'}
+            </Text>
+          </View>
+        )}
         {onExerciseSelect && (
           <View style={styles.selectIndicator}>
             <Ionicons name="add-circle" size={24} color={COLORS.primary} />
@@ -476,11 +577,32 @@ const ExercisesScreen: React.FC = () => {
         <Text style={styles.exerciseName} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={styles.muscleGroups}>
-          {item.primaryMuscleGroups && item.primaryMuscleGroups.length > 0 
-            ? item.primaryMuscleGroups.join(', ') 
-            : 'No especificado'}
-        </Text>
+        {/* Información de músculos primarios y secundarios */}
+        <View style={styles.muscleInfoContainer}>
+          {/* Músculos Primarios */}
+          <View style={styles.muscleGroupContainer}>
+            <Text style={styles.muscleGroupLabel}>
+              <Ionicons name="star" size={12} color={COLORS.primary} /> Primarios:
+            </Text>
+            <Text style={styles.primaryMuscleGroups}>
+              {item.primaryMuscleGroups && item.primaryMuscleGroups.length > 0 
+                ? item.primaryMuscleGroups.join(', ') 
+                : 'No especificado'}
+            </Text>
+          </View>
+          
+          {/* Músculos Secundarios */}
+          {item.secondaryMuscleGroups && item.secondaryMuscleGroups.length > 0 && (
+            <View style={styles.muscleGroupContainer}>
+              <Text style={styles.muscleGroupLabel}>
+                <Ionicons name="star-outline" size={12} color={COLORS.gray} /> Secundarios:
+              </Text>
+              <Text style={styles.secondaryMuscleGroups}>
+                {item.secondaryMuscleGroups.join(', ')}
+              </Text>
+            </View>
+          )}
+        </View>
         <View style={styles.badgeContainer}>
           <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(item.difficulty) }]}>
             <Text style={styles.badgeText}>{item.difficulty}</Text>
@@ -510,11 +632,32 @@ const ExercisesScreen: React.FC = () => {
             <Text style={styles.exerciseName} numberOfLines={2}>
               {item.name}
             </Text>
-            <Text style={styles.muscleGroups}>
-              {item.primaryMuscleGroups && item.primaryMuscleGroups.length > 0 
-                ? item.primaryMuscleGroups.join(', ') 
-                : 'No especificado'}
-            </Text>
+            {/* Información de músculos primarios y secundarios */}
+            <View style={styles.muscleInfoContainer}>
+              {/* Músculos Primarios */}
+              <View style={styles.muscleGroupContainer}>
+                <Text style={styles.muscleGroupLabel}>
+                  <Ionicons name="star" size={12} color={COLORS.primary} /> Primarios:
+                </Text>
+                <Text style={styles.primaryMuscleGroups}>
+                  {item.primaryMuscleGroups && item.primaryMuscleGroups.length > 0 
+                    ? item.primaryMuscleGroups.join(', ') 
+                    : 'No especificado'}
+                </Text>
+              </View>
+              
+              {/* Músculos Secundarios */}
+              {item.secondaryMuscleGroups && item.secondaryMuscleGroups.length > 0 && (
+                <View style={styles.muscleGroupContainer}>
+                  <Text style={styles.muscleGroupLabel}>
+                    <Ionicons name="star-outline" size={12} color={COLORS.gray} /> Secundarios:
+                  </Text>
+                  <Text style={styles.secondaryMuscleGroups}>
+                    {item.secondaryMuscleGroups.join(', ')}
+                  </Text>
+                </View>
+              )}
+            </View>
             <View style={styles.badgeContainer}>
               <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(item.difficulty) }]}>
                 <Text style={styles.badgeText}>{item.difficulty}</Text>
@@ -580,7 +723,7 @@ const ExercisesScreen: React.FC = () => {
       <View style={styles.filtersContainer}>
         <View style={styles.filtersRow}>
           <TouchableOpacity 
-            style={[styles.filterPill, styles.filterPillActive]}
+            style={[styles.filterPill, selectedMuscle === 'all' && selectedEquipment === 'all' && styles.filterPillActive]}
             onPress={() => {
               setSelectedMuscle('all');
               setSelectedEquipment('all');
@@ -640,11 +783,7 @@ const ExercisesScreen: React.FC = () => {
         }
       />
 
-      {/* Botón flotante "Crear ejercicio" */}
-      <TouchableOpacity style={styles.floatingButton}>
-        <Ionicons name="add" size={24} color={COLORS.secondary} />
-        <Text style={styles.floatingButtonText}>Crear ejercicio</Text>
-      </TouchableOpacity>
+
 
       {/* Modal para filtro de músculos */}
       <Modal
@@ -925,6 +1064,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
+  placeholderSubtext: {
+    fontSize: SIZES.fontExtraSmall,
+    color: COLORS.gray,
+    marginTop: 4,
+    textAlign: "center",
+  },
+  placeholderIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#eee",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   videoOverlay: {
     position: "absolute",
     top: 0,
@@ -966,6 +1120,31 @@ const styles = StyleSheet.create({
     fontSize: SIZES.fontSmall,
     color: COLORS.gray, // Texto gris para los grupos musculares
     marginBottom: 8,
+    textAlign: "center",
+  },
+  muscleInfoContainer: {
+    marginBottom: 8,
+  },
+  muscleGroupContainer: {
+    marginBottom: 4,
+  },
+  muscleGroupLabel: {
+    fontSize: SIZES.fontExtraSmall,
+    color: COLORS.gray,
+    fontWeight: "600",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  primaryMuscleGroups: {
+    fontSize: SIZES.fontSmall,
+    color: COLORS.primary,
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  secondaryMuscleGroups: {
+    fontSize: SIZES.fontSmall,
+    color: COLORS.gray,
+    fontWeight: "400",
     textAlign: "center",
   },
   badgeContainer: {
@@ -1091,29 +1270,18 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  floatingButton: {
-    position: "absolute",
-    bottom: 100, // Subido para que sea más visible
-    right: 20,
-    backgroundColor: "#FFA500", // Naranja como en la imagen
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 1000, // Asegurar que esté por encima de otros elementos
+  videoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  floatingButtonText: {
-    color: COLORS.secondary,
-    fontSize: 14,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
+
+
   cardSelectable: {
     borderWidth: 2,
     borderColor: COLORS.primary,

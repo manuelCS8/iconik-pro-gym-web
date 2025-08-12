@@ -182,8 +182,17 @@ const ExerciseVideoScreen: React.FC = () => {
           {/* Badges */}
           <View style={styles.badgeRow}>
             <View style={styles.muscleBadge}>
-              <Text style={styles.badgeText}>{exercise.primaryMuscleGroups.join(', ')}</Text>
+              <Text style={styles.badgeText}>
+                <Ionicons name="star" size={12} color="#fff" /> {exercise.primaryMuscleGroups.join(', ')}
+              </Text>
             </View>
+            {exercise.secondaryMuscleGroups && exercise.secondaryMuscleGroups.length > 0 && (
+              <View style={styles.secondaryMuscleBadge}>
+                <Text style={styles.secondaryBadgeText}>
+                  <Ionicons name="star-outline" size={12} color="#ccc" /> {exercise.secondaryMuscleGroups.join(', ')}
+                </Text>
+              </View>
+            )}
             <View style={styles.equipmentBadge}>
               <Text style={styles.badgeText}>{exercise.equipment}</Text>
             </View>
@@ -314,6 +323,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 4,
   },
+  secondaryMuscleBadge: {
+    backgroundColor: '#333',
+    paddingHorizontal: SIZES.padding / 2,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginRight: 8,
+    marginBottom: 4,
+  },
   equipmentBadge: {
     backgroundColor: COLORS.info,
     paddingHorizontal: SIZES.padding / 2,
@@ -333,6 +350,11 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: SIZES.fontSmall,
     fontWeight: 'bold',
+  },
+  secondaryBadgeText: {
+    color: '#ccc',
+    fontSize: SIZES.fontSmall,
+    fontWeight: '500',
   },
   section: {
     marginBottom: SIZES.paddingLarge,

@@ -162,7 +162,44 @@ const NutritionHomeScreen: React.FC = () => {
   };
 
   const handleSettings = () => {
-    navigation.navigate('NutritionSettings');
+    Alert.alert(
+      'Configuración de Nutrición',
+      '¿Qué te gustaría hacer?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Volver a Calcular',
+          onPress: () => {
+            Alert.alert(
+              'Recalcular Calorías',
+              '¿Estás seguro de que quieres volver a calcular tus calorías? Esto sobrescribirá tu configuración actual.',
+              [
+                {
+                  text: 'Cancelar',
+                  style: 'cancel'
+                },
+                {
+                  text: 'Sí, Recalcular',
+                  style: 'destructive',
+                  onPress: () => {
+                    // Limpiar configuración actual y redirigir a setup
+                    dispatch(setNutritionData({ isSetupComplete: false }));
+                    navigation.navigate('NutritionSetup');
+                  }
+                }
+              ]
+            );
+          }
+        },
+        {
+          text: 'Configuración',
+          onPress: () => navigation.navigate('NutritionSettings')
+        }
+      ]
+    );
   };
 
   // Si no está configurado, mostrar pantalla de setup
@@ -348,6 +385,9 @@ const NutritionHomeScreen: React.FC = () => {
             </View>
           )}
         </View>
+
+        {/* Espacio para la barra de navegación */}
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -7,7 +7,8 @@ import {
   Dimensions, 
   TouchableOpacity,
   Alert,
-  SafeAreaView
+  SafeAreaView,
+  Image
 } from "react-native";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { Video } from "expo-av";
@@ -27,7 +28,8 @@ type RouteParams = {
 interface Exercise {
   id: string;
   name: string;
-  muscleGroup: string;
+  primaryMuscleGroups: string[];
+  secondaryMuscleGroups?: string[];
   equipment: string;
   difficulty: string;
   description?: string;
@@ -35,6 +37,8 @@ interface Exercise {
   tips?: string;
   mediaType?: string;
   mediaURL?: string;
+  thumbnailURL?: string;
+  imageURL?: string;
   isActive?: boolean;
 }
 
@@ -71,7 +75,12 @@ const ExerciseDetailScreen: React.FC = () => {
         const exerciseData: Exercise = {
           id: exerciseSnap.id,
           name: data.name || '',
-          muscleGroup: data.muscleGroup || '',
+          primaryMuscleGroups: Array.isArray(data.primaryMuscleGroups) 
+            ? data.primaryMuscleGroups 
+            : (data.muscleGroup ? [data.muscleGroup] : []),
+          secondaryMuscleGroups: Array.isArray(data.secondaryMuscleGroups) 
+            ? data.secondaryMuscleGroups 
+            : [],
           equipment: data.equipment || '',
           difficulty: data.difficulty || 'Principiante',
           description: data.description || '',
@@ -79,6 +88,8 @@ const ExerciseDetailScreen: React.FC = () => {
           tips: data.tips || '',
           mediaType: data.mediaType || '',
           mediaURL: data.mediaURL || '',
+          thumbnailURL: data.thumbnailURL || '',
+          imageURL: data.imageURL || '',
           isActive: data.isActive !== false,
         };
         
@@ -116,20 +127,50 @@ const ExerciseDetailScreen: React.FC = () => {
 
       {/* Video/Imagen del ejercicio */}
       <View style={styles.mediaCard}>
-        {exercise?.mediaType === 'video' && exercise?.mediaURL ? (
+        {exercise?.mediaType && (exercise?.mediaType === 'video' || exercise?.mediaType.startsWith('video/')) && exercise?.mediaURL ? (
           <Video
             source={{ uri: exercise.mediaURL }}
             style={styles.video}
             resizeMode="cover"
             useNativeControls={false}
-            isLooping
-            shouldPlay
-            isMuted
+            isLooping={true}
+            shouldPlay={true}
+            isMuted={true}
+            onError={(error) => {
+              console.log(`❌ Error cargando video en detalle: ${exercise.mediaURL}`, error);
+              console.log(`🔍 MediaType: ${exercise.mediaType}, MediaURL: ${exercise.mediaURL}`);
+            }}
+            onLoad={() => {
+              console.log(`✅ Video cargado en detalle: ${exercise.mediaURL}`);
+              console.log(`🔍 MediaType: ${exercise.mediaType}, MediaURL: ${exercise.mediaURL}`);
+            }}
+          />
+        ) : exercise?.mediaType && (exercise?.mediaType === 'image' || exercise?.mediaType.startsWith('image/')) && exercise?.mediaURL ? (
+          <Image
+            source={{ uri: exercise.mediaURL }}
+            style={styles.video}
+            resizeMode="cover"
+            onError={(error) => {
+              console.log(`❌ Error cargando imagen en detalle: ${exercise.mediaURL}`, error);
+              console.log(`🔍 MediaType: ${exercise.mediaType}, MediaURL: ${exercise.mediaURL}`);
+            }}
+            onLoad={() => {
+              console.log(`✅ Imagen cargada en detalle: ${exercise.mediaURL}`);
+              console.log(`🔍 MediaType: ${exercise.mediaType}, MediaURL: ${exercise.mediaURL}`);
+            }}
           />
         ) : (
           <View style={styles.placeholderContainer}>
             <Ionicons name="fitness" size={64} color={COLORS.gray} />
-            <Text style={styles.placeholderText}>Sin video disponible</Text>
+            <Text style={styles.placeholderText}>
+              {exercise?.mediaURL ? 'Media no compatible' : 'Sin media disponible'}
+            </Text>
+            <Text style={styles.placeholderSubtext}>
+              {exercise?.mediaType ? `Tipo: ${exercise.mediaType}` : 'Sin tipo configurado'}
+            </Text>
+            <Text style={styles.placeholderSubtext}>
+              {exercise?.mediaURL ? `URL: ${exercise.mediaURL.substring(0, 50)}...` : 'Sin URL'}
+            </Text>
           </View>
         )}
       </View>
@@ -137,14 +178,37 @@ const ExerciseDetailScreen: React.FC = () => {
       {/* Nombre del ejercicio y músculos */}
       <View style={styles.exerciseInfoCard}>
         <Text style={styles.exerciseName}>{exercise?.name}</Text>
-        <Text style={styles.muscleInfo}>
-          <Text style={styles.muscleLabel}>Primarios: </Text>
-          <Text style={styles.muscleValue}>{exercise?.muscleGroup || 'No especificado'}</Text>
-        </Text>
-        <Text style={styles.muscleInfo}>
-          <Text style={styles.muscleLabel}>Secundarios: </Text>
-          <Text style={styles.muscleValue}>No especificados</Text>
-        </Text>
+        
+        {/* Información de músculos primarios y secundarios */}
+        <View style={styles.muscleInfoContainer}>
+          {/* Músculos Primarios */}
+          <View style={styles.muscleGroupContainer}>
+            <Text style={styles.muscleInfo}>
+              <Text style={styles.muscleLabel}>
+                <Ionicons name="star" size={14} color={COLORS.primary} /> Primarios: 
+              </Text>
+              <Text style={styles.primaryMuscleValue}>
+                {exercise?.primaryMuscleGroups && exercise.primaryMuscleGroups.length > 0 
+                  ? exercise.primaryMuscleGroups.join(', ') 
+                  : 'No especificado'}
+              </Text>
+            </Text>
+          </View>
+          
+          {/* Músculos Secundarios */}
+          {exercise?.secondaryMuscleGroups && exercise.secondaryMuscleGroups.length > 0 && (
+            <View style={styles.muscleGroupContainer}>
+              <Text style={styles.muscleInfo}>
+                <Text style={styles.muscleLabel}>
+                  <Ionicons name="star-outline" size={14} color={COLORS.gray} /> Secundarios: 
+                </Text>
+                <Text style={styles.secondaryMuscleValue}>
+                  {exercise.secondaryMuscleGroups.join(', ')}
+                </Text>
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Records Personales */}
@@ -395,6 +459,12 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     marginTop: SIZES.padding / 2,
   },
+  placeholderSubtext: {
+    fontSize: SIZES.fontSmall,
+    color: COLORS.gray,
+    marginTop: SIZES.padding / 4,
+    textAlign: "center",
+  },
   pauseButton: {
     position: "absolute",
     top: SIZES.padding,
@@ -548,6 +618,20 @@ const styles = StyleSheet.create({
   muscleValue: {
     fontWeight: "bold",
     color: COLORS.primary,
+  },
+  muscleInfoContainer: {
+    marginBottom: SIZES.padding / 2,
+  },
+  muscleGroupContainer: {
+    marginBottom: SIZES.padding / 3,
+  },
+  primaryMuscleValue: {
+    fontWeight: "bold",
+    color: COLORS.primary,
+  },
+  secondaryMuscleValue: {
+    fontWeight: "500",
+    color: COLORS.gray,
   },
   recordsCard: {
     backgroundColor: "#000", // Fondo negro
