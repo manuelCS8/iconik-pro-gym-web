@@ -64,7 +64,8 @@ filesToCopy.forEach(file => {
   // Reemplazar servicios que usan SQLite con versiones web
   const servicesToReplace = [
     { from: 'trainingHistoryService.ts', to: 'trainingHistoryService.web.ts' },
-    { from: 'nutritionDataService.ts', to: 'nutritionDataService.web.ts' }
+    { from: 'nutritionDataService.ts', to: 'nutritionDataService.web.ts' },
+    { from: 'sqliteService.ts', to: 'sqliteService.web.ts' }
   ];
 
   servicesToReplace.forEach(({ from, to }) => {
