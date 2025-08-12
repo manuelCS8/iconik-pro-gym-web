@@ -55,11 +55,26 @@ filesToCopy.forEach(file => {
   }
 });
 
-// Crear package.json sin SQLite
-const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-delete packageJson.dependencies['expo-sqlite'];
-delete packageJson.dependencies['@expo/webpack-config'];
-delete packageJson.dependencies['@expo/metro-runtime'];
+  // Crear package.json sin SQLite
+  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  delete packageJson.dependencies['expo-sqlite'];
+  delete packageJson.dependencies['@expo/webpack-config'];
+  delete packageJson.dependencies['@expo/metro-runtime'];
+
+  // Reemplazar servicios que usan SQLite con versiones web
+  const servicesToReplace = [
+    { from: 'trainingHistoryService.ts', to: 'trainingHistoryService.web.ts' },
+    { from: 'nutritionDataService.ts', to: 'nutritionDataService.web.ts' }
+  ];
+
+  servicesToReplace.forEach(({ from, to }) => {
+    const fromPath = path.join(tempDir, 'src', 'services', from);
+    const toPath = path.join(tempDir, 'src', 'services', from);
+    if (fs.existsSync(fromPath)) {
+      fs.unlinkSync(fromPath);
+      console.log(`✅ Removido ${from}`);
+    }
+  });
 
 // Renombrar app.config.web.js a app.config.js
 const webConfigPath = path.join(tempDir, 'app.config.web.js');
