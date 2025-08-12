@@ -13,6 +13,27 @@ if (fs.existsSync(tempDir)) {
 }
 fs.mkdirSync(tempDir);
 
+// Función para copiar archivos/directorios de forma compatible
+function copyFileOrDir(source, dest) {
+  if (fs.lstatSync(source).isDirectory()) {
+    // Crear directorio destino
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+    }
+    
+    // Copiar contenido del directorio
+    const files = fs.readdirSync(source);
+    files.forEach(file => {
+      const sourcePath = path.join(source, file);
+      const destPath = path.join(dest, file);
+      copyFileOrDir(sourcePath, destPath);
+    });
+  } else {
+    // Copiar archivo
+    fs.copyFileSync(source, dest);
+  }
+}
+
 // Copiar archivos necesarios
 const filesToCopy = [
   'src',
@@ -29,24 +50,23 @@ const filesToCopy = [
 
 filesToCopy.forEach(file => {
   if (fs.existsSync(file)) {
-    if (fs.lstatSync(file).isDirectory()) {
-      execSync(`xcopy "${file}" "${tempDir}\\${file}" /E /I /Y`, { shell: true });
-    } else {
-      fs.copyFileSync(file, path.join(tempDir, file));
-    }
+    const destPath = path.join(tempDir, file);
+    copyFileOrDir(file, destPath);
   }
 });
 
-  // Crear package.json sin SQLite
-  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  delete packageJson.dependencies['expo-sqlite'];
-  delete packageJson.dependencies['@expo/webpack-config'];
-  delete packageJson.dependencies['@expo/metro-runtime'];
-  
-  // Renombrar app.config.web.js a app.config.js
-  if (fs.existsSync('app.config.web.js')) {
-    fs.renameSync('app.config.web.js', 'app.config.js');
-  }
+// Crear package.json sin SQLite
+const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+delete packageJson.dependencies['expo-sqlite'];
+delete packageJson.dependencies['@expo/webpack-config'];
+delete packageJson.dependencies['@expo/metro-runtime'];
+
+// Renombrar app.config.web.js a app.config.js
+const webConfigPath = path.join(tempDir, 'app.config.web.js');
+const configPath = path.join(tempDir, 'app.config.js');
+if (fs.existsSync(webConfigPath)) {
+  fs.renameSync(webConfigPath, configPath);
+}
 
 fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify(packageJson, null, 2));
 
@@ -64,7 +84,11 @@ try {
   
   // Mover build al directorio principal
   if (fs.existsSync('web-build')) {
-    execSync(`xcopy "web-build" "..\\web-build" /E /I /Y`, { shell: true });
+    const webBuildPath = path.join(process.cwd(), 'web-build');
+    const parentWebBuildPath = path.join('..', 'web-build');
+    
+    // Copiar web-build al directorio padre
+    copyFileOrDir(webBuildPath, parentWebBuildPath);
     console.log('✅ Web app generada exitosamente en web-build/');
   }
 } catch (error) {
