@@ -3,14 +3,33 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Reglas para usuarios
     match /users/{userId} {
+      // Permitir lectura si es el propio usuario o admin
       allow read: if request.auth != null && (request.auth.uid == userId || 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
+      
+      // Permitir escritura si es el propio usuario o admin
       allow write: if request.auth != null && 
         (request.auth.uid == userId || 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
+      
+      // Permitir creación si es admin (crear usuario) o el propio usuario (completar registro)
       allow create: if request.auth != null && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN' ||
+         request.auth.uid == userId);
+      
+      // Permitir actualización de registro pendiente
+      allow update: if request.auth != null && 
         (request.auth.uid == userId || 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
+    }
+    
+    // NUEVA: Colección para usuarios pendientes de registro
+    match /pendingUsers/{email} {
+      // Permitir lectura pública (necesario para verificar si existe antes de registrarse)
+      allow read: if true;
+      // Solo admins pueden crear/actualizar/eliminar usuarios pendientes
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
     }
     
     // Reglas para ejercicios

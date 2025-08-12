@@ -43,6 +43,13 @@ const AdminManagementScreen: React.FC = () => {
       color: "#4CAF50",
     },
     {
+      title: "Usuarios Pendientes",
+      subtitle: "Ver y gestionar usuarios pendientes de registro",
+      icon: "time",
+      screen: "PendingUsers",
+      color: "#FF9800",
+    },
+    {
       title: "Gestionar Miembros",
       subtitle: "Ver y administrar usuarios",
       icon: "people",
@@ -62,48 +69,6 @@ const AdminManagementScreen: React.FC = () => {
       icon: "list",
       screen: "ManageRoutines",
       color: "#9C27B0",
-    },
-    {
-      title: "Migrar Videos",
-      subtitle: "Subir videos locales a Firebase Storage",
-      icon: "cloud-upload",
-      screen: "MigrateVideos",
-      color: "#E91E63",
-    },
-    {
-      title: "Migrar Imágenes",
-      subtitle: "Subir imágenes locales a Firebase Storage",
-      icon: "image",
-      screen: "MigrateImages",
-      color: "#4CAF50",
-    },
-    {
-      title: "Prueba de Imágenes",
-      subtitle: "Probar subida de imágenes a Firebase Storage",
-      icon: "flask",
-      screen: "TestImageUpload",
-      color: "#9C27B0",
-    },
-    {
-      title: "Actualizar Rutinas",
-      subtitle: "Hacer públicas las rutinas existentes",
-      icon: "refresh-circle",
-      screen: "UpdateRoutines",
-      color: "#FF9800",
-    },
-    {
-      title: "Eliminar Rutinas",
-      subtitle: "Eliminar rutinas existentes del sistema",
-      icon: "trash",
-      screen: "DeleteRoutines",
-      color: "#F44336",
-    },
-    {
-      title: "Diagnóstico de Rutinas",
-      subtitle: "Diagnosticar problemas con rutinas y permisos",
-      icon: "bug",
-      screen: "TestRoutines",
-      color: "#FF5722",
     },
   ];
 
@@ -170,18 +135,26 @@ const AdminManagementScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => navigation.navigate("CreateExercise")}
+            onPress={() => navigation.navigate("ManageMembers")}
           >
-            <Ionicons name="fitness" size={24} color="#2196F3" />
-            <Text style={styles.quickActionText}>Añadir Ejercicio</Text>
+            <Ionicons name="people" size={24} color="#2196F3" />
+            <Text style={styles.quickActionText}>Gestionar Miembros</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => navigation.navigate("CreateRoutine")}
+            onPress={() => navigation.navigate("ManageExercises")}
           >
-            <Ionicons name="list" size={24} color="#FF9800" />
-            <Text style={styles.quickActionText}>Crear Nueva Rutina</Text>
+            <Ionicons name="fitness" size={24} color="#FF9800" />
+            <Text style={styles.quickActionText}>Gestionar Ejercicios</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionCard}
+            onPress={() => navigation.navigate("ManageRoutines")}
+          >
+            <Ionicons name="list" size={24} color="#9C27B0" />
+            <Text style={styles.quickActionText}>Gestionar Rutinas</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -12,10 +12,11 @@ interface AuthContextProps {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signInWithGoogle: (idToken: string) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>; // Alias para signInWithEmail
   signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isMember: boolean;
@@ -63,7 +64,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           uid: profile.uid,
           email: profile.email,
           role: profile.role?.toUpperCase(),
-          membershipEnd: profile.membershipEnd ? profile.membershipEnd.toISOString() : null, // <-- serializable
+          membershipEnd: profile.membershipEnd ? 
+            (typeof profile.membershipEnd === 'string' ? 
+              profile.membershipEnd : 
+              (profile.membershipEnd && typeof profile.membershipEnd.toDate === 'function' ? 
+                profile.membershipEnd.toDate().toISOString() : 
+                new Date(profile.membershipEnd).toISOString()
+              )
+            ) : null,
           name: profile.displayName, // Agregar el nombre del usuario
           weight: profile.weight,
           height: profile.height,
@@ -106,19 +114,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Iniciar sesión con Google
-  const signInWithGoogle = async (idToken: string) => {
-    try {
-      setLoading(true);
-      await authService.signInWithGoogle(idToken);
-      console.log('Inicio de sesión con Google exitoso');
-    } catch (err: any) {
-      setLoading(false);
-      console.error('Error en Google Sign-In:', err);
-      throw err;
-    }
-  };
-
   // Iniciar sesión con email y contraseña
   const signInWithEmail = async (email: string, password: string) => {
     try {
@@ -158,14 +153,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Cambiar contraseña
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      setLoading(true);
+      await authService.changePassword(currentPassword, newPassword);
+      console.log('Contraseña cambiada exitosamente');
+    } catch (error: any) {
+      setLoading(false);
+      console.error('Error al cambiar contraseña:', error);
+      throw error;
+    }
+  };
+
   const value: AuthContextProps = {
     user,
     userProfile,
     loading,
-    signInWithGoogle,
     signInWithEmail,
+    signIn: signInWithEmail, // Alias para signInWithEmail
     signUpWithEmail,
     signOut,
+    changePassword,
     isAuthenticated: !!user,
     isAdmin: userProfile?.role === 'ADMIN',
     isMember: userProfile?.role === 'MEMBER',

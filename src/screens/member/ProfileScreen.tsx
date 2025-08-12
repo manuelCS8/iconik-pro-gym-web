@@ -26,6 +26,7 @@ import nutritionDataService, { NutritionData } from "../../services/nutritionDat
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as SQLite from 'expo-sqlite';
+import { useAuth } from "../../contexts/AuthContext";
 
 const windowWidth = Dimensions.get("window").width;
 
@@ -45,6 +46,7 @@ const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const { uid, email, user, role } = useSelector((state: RootState) => state.auth);
   const insets = useSafeAreaInsets();
+  const { changePassword } = useAuth();
 
   // Estado para el número de entrenamientos
   const [trainingCount, setTrainingCount] = useState(0);
@@ -328,6 +330,7 @@ const ProfileScreen: React.FC = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   // Estados para edición
   const [editName, setEditName] = useState(profile.name);
@@ -339,6 +342,25 @@ const ProfileScreen: React.FC = () => {
   const [weightInput, setWeightInput] = useState(profile.weight?.toString() || "");
   const [heightInput, setHeightInput] = useState(profile.height?.toString() || "");
   const [ageInput, setAgeInput] = useState(profile.age?.toString() || "");
+
+  // Estados para cambiar contraseña
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+  const [passwordRules, setPasswordRules] = useState({
+    minLength: false,
+    hasUpper: false,
+    hasLower: false,
+    hasNumber: false,
+    hasSpecial: false,
+  });
 
   // Datos de ejemplo para la gráfica de entrenamientos (en horas)
   const trainingData = [
@@ -445,9 +467,12 @@ const ProfileScreen: React.FC = () => {
   const handleLogout = () => {
     Alert.alert(
       "Cerrar Sesión",
-      "¿Estás seguro de que deseas cerrar sesión?",
+      "¿Estás seguro de que quieres cerrar sesión?",
       [
-        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
         {
           text: "Cerrar Sesión",
           style: "destructive",
@@ -457,6 +482,89 @@ const ProfileScreen: React.FC = () => {
         }
       ]
     );
+  };
+
+  // Funciones para cambiar contraseña
+  const onNewPasswordChange = (text: string) => {
+    setPasswordForm(prev => ({ ...prev, newPassword: text }));
+    setPasswordRules({
+      minLength: text.length >= 8,
+      hasUpper: /[A-Z]/.test(text),
+      hasLower: /[a-z]/.test(text),
+      hasNumber: /\d/.test(text),
+      hasSpecial: /[^A-Za-z0-9]/.test(text),
+    });
+  };
+
+  const validatePasswordForm = () => {
+    const { currentPassword, newPassword, confirmPassword } = passwordForm;
+
+    if (!currentPassword.trim()) {
+      Alert.alert('Error', 'Ingresa tu contraseña actual');
+      return false;
+    }
+
+    if (!newPassword.trim()) {
+      Alert.alert('Error', 'Ingresa la nueva contraseña');
+      return false;
+    }
+
+    const strongPassword =
+      newPassword.length >= 8 &&
+      /[A-Z]/.test(newPassword) &&
+      /[a-z]/.test(newPassword) &&
+      /\d/.test(newPassword) &&
+      /[^A-Za-z0-9]/.test(newPassword);
+
+    if (!strongPassword) {
+      Alert.alert(
+        'Contraseña insegura',
+        'La nueva contraseña debe tener al menos 8 caracteres e incluir mayúscula, minúscula, número y símbolo.'
+      );
+      return false;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleChangePassword = async () => {
+    if (!validatePasswordForm()) return;
+
+    try {
+      await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      
+      Alert.alert(
+        '✅ Contraseña actualizada',
+        'Tu contraseña ha sido cambiada exitosamente.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowChangePasswordModal(false);
+              setPasswordForm({
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: '',
+              });
+              setPasswordRules({
+                minLength: false,
+                hasUpper: false,
+                hasLower: false,
+                hasNumber: false,
+                hasSpecial: false,
+              });
+            }
+          }
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Error al cambiar la contraseña');
+    }
   };
 
   return (
@@ -645,7 +753,7 @@ const ProfileScreen: React.FC = () => {
               style={styles.settingsOption}
               onPress={() => {
                 setShowSettingsModal(false);
-                Alert.alert("Info", "Funcionalidad disponible próximamente");
+                setShowChangePasswordModal(true);
               }}
             >
               <Text style={styles.settingsText}>🔒 Cambiar Contraseña</Text>
@@ -910,6 +1018,126 @@ const ProfileScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal
+        visible={showChangePasswordModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowChangePasswordModal(false)}>
+              <Text style={styles.modalCancel}>Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Cambiar Contraseña</Text>
+            <TouchableOpacity onPress={handleChangePassword}>
+              <Text style={styles.modalSave}>Guardar</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            {/* Contraseña actual */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Contraseña actual</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={passwordForm.currentPassword}
+                  onChangeText={(text) => setPasswordForm(prev => ({ ...prev, currentPassword: text }))}
+                  placeholder="Ingresa tu contraseña actual"
+                  secureTextEntry={!showPasswords.current}
+                  placeholderTextColor="#888"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                >
+                  <Ionicons 
+                    name={showPasswords.current ? "eye-off" : "eye"} 
+                    size={20} 
+                    color="#666" 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Nueva contraseña */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nueva contraseña</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={passwordForm.newPassword}
+                  onChangeText={onNewPasswordChange}
+                  placeholder="Mínimo 8, mayúscula, minúscula, número y símbolo"
+                  secureTextEntry={!showPasswords.new}
+                  placeholderTextColor="#888"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                >
+                  <Ionicons 
+                    name={showPasswords.new ? "eye-off" : "eye"} 
+                    size={20} 
+                    color="#666" 
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Requisitos de contraseña */}
+              <View style={styles.rulesContainer}>
+                <View style={styles.ruleItem}>
+                  <Ionicons name={passwordRules.minLength ? 'checkmark-circle' : 'close-circle'} size={14} color={passwordRules.minLength ? '#4caf50' : '#ff5252'} />
+                  <Text style={styles.ruleText}>Al menos 8 caracteres</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <Ionicons name={passwordRules.hasUpper ? 'checkmark-circle' : 'close-circle'} size={14} color={passwordRules.hasUpper ? '#4caf50' : '#ff5252'} />
+                  <Text style={styles.ruleText}>Una mayúscula</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <Ionicons name={passwordRules.hasLower ? 'checkmark-circle' : 'close-circle'} size={14} color={passwordRules.hasLower ? '#4caf50' : '#ff5252'} />
+                  <Text style={styles.ruleText}>Una minúscula</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <Ionicons name={passwordRules.hasNumber ? 'checkmark-circle' : 'close-circle'} size={14} color={passwordRules.hasNumber ? '#4caf50' : '#ff5252'} />
+                  <Text style={styles.ruleText}>Un número</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <Ionicons name={passwordRules.hasSpecial ? 'checkmark-circle' : 'close-circle'} size={14} color={passwordRules.hasSpecial ? '#4caf50' : '#ff5252'} />
+                  <Text style={styles.ruleText}>Un símbolo</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Confirmar nueva contraseña */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirmar nueva contraseña</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={passwordForm.confirmPassword}
+                  onChangeText={(text) => setPasswordForm(prev => ({ ...prev, confirmPassword: text }))}
+                  placeholder="Repite la nueva contraseña"
+                  secureTextEntry={!showPasswords.confirm}
+                  placeholderTextColor="#888"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                >
+                  <Ionicons 
+                    name={showPasswords.confirm ? "eye-off" : "eye"} 
+                    size={20} 
+                    color="#666" 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -1248,6 +1476,38 @@ const styles = StyleSheet.create({
      fontSize: 18,
      fontWeight: 'bold',
    },
+   passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
+    backgroundColor: '#222',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: '#fff',
+  },
+  eyeButton: {
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rulesContainer: {
+    marginTop: 8,
+    gap: 6,
+  },
+  ruleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  ruleText: {
+    fontSize: 12,
+    color: '#aaa',
+  },
 });
 
 export default ProfileScreen; 

@@ -714,7 +714,7 @@ const ExercisesScreen: React.FC = () => {
             placeholder="Buscar ejercicio"
             value={searchText}
             onChangeText={setSearchText}
-            placeholderTextColor={COLORS.gray}
+            placeholderTextColor="#999"
           />
         </View>
       </View>
@@ -937,9 +937,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 10, // Bordes más redondeados como en la imagen
     paddingHorizontal: 16, // Más padding horizontal para el icono y texto
-    paddingVertical: 12, // Más padding vertical para mejor altura
+    paddingVertical: 8, // Menos padding vertical
     borderWidth: 0, // Sin borde para un look más limpio
-    height: 48, // Altura más generosa como en la imagen
+    height: 44, // Altura reducida
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -948,10 +948,12 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 16, // Tamaño de fuente más grande
-    color: COLORS.secondary,
+    fontSize: 12, // Tamaño de fuente más pequeño
+    color: '#000', // Color negro para máximo contraste
     marginLeft: 12, // Más espacio entre icono y texto
     height: "100%", // Ocupar toda la altura del container
+    fontWeight: '500', // Peso de fuente medio para mejor visibilidad
+    paddingVertical: 0, // Sin padding vertical para mejor control
   },
   filtersContainer: {
     marginBottom: SIZES.padding,

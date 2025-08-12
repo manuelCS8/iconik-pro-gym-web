@@ -1,0 +1,11 @@
+{
+  "buildCommand": "node build-web.js",
+  "outputDirectory": "web-build",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

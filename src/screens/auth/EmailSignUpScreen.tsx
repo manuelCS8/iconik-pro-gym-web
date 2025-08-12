@@ -30,6 +30,13 @@ const EmailSignUpScreen: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [passwordRules, setPasswordRules] = useState({
+    minLength: false,
+    hasUpper: false,
+    hasLower: false,
+    hasNumber: false,
+    hasSpecial: false,
+  });
 
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -53,8 +60,18 @@ const EmailSignUpScreen: React.FC = () => {
       return false;
     }
 
-    if (!password || password.length < 6) {
-      Alert.alert("Error", "La contraseña debe tener al menos 6 caracteres");
+    const strongPassword =
+      password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[a-z]/.test(password) &&
+      /\d/.test(password) &&
+      /[^A-Za-z0-9]/.test(password);
+
+    if (!strongPassword) {
+      Alert.alert(
+        "Contraseña insegura",
+        "Usa al menos 8 caracteres e incluye mayúscula, minúscula, número y símbolo."
+      );
       return false;
     }
 
@@ -74,6 +91,17 @@ const EmailSignUpScreen: React.FC = () => {
     }
 
     return true;
+  };
+
+  const onPasswordChange = (value: string) => {
+    updateFormData('password', value);
+    setPasswordRules({
+      minLength: value.length >= 8,
+      hasUpper: /[A-Z]/.test(value),
+      hasLower: /[a-z]/.test(value),
+      hasNumber: /\d/.test(value),
+      hasSpecial: /[^A-Za-z0-9]/.test(value),
+    });
   };
 
   const onSignUpPressed = async () => {
@@ -176,13 +204,29 @@ const EmailSignUpScreen: React.FC = () => {
               <Text style={styles.inputLabel}>Contraseña *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8, mayúscula, minúscula, número y símbolo"
                 value={formData.password}
-                onChangeText={(value) => updateFormData('password', value)}
+                onChangeText={onPasswordChange}
                 secureTextEntry
                 placeholderTextColor="#999"
                 editable={!isLoading}
               />
+            </View>
+
+            {/* Requisitos de contraseña */}
+            <View style={{ marginTop: 8 }}>
+              {[
+                { ok: passwordRules.minLength, label: 'Al menos 8 caracteres' },
+                { ok: passwordRules.hasUpper, label: 'Una mayúscula' },
+                { ok: passwordRules.hasLower, label: 'Una minúscula' },
+                { ok: passwordRules.hasNumber, label: 'Un número' },
+                { ok: passwordRules.hasSpecial, label: 'Un símbolo' },
+              ].map((r, idx) => (
+                <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name={r.ok ? 'checkmark-circle' : 'close-circle'} size={14} color={r.ok ? '#4caf50' : '#ff5252'} />
+                  <Text style={{ fontSize: 12, color: '#666' }}>{r.label}</Text>
+                </View>
+              ))}
             </View>
 
             {/* Confirmar contraseña */}

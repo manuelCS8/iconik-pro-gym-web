@@ -6,6 +6,7 @@ import { COLORS, SIZES, GLOBAL_STYLES } from '../../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
 import RoleGuard from '../../components/RoleGuard';
 import { useNavigation } from '@react-navigation/native';
+import { authService } from '../../services/authService';
 
 interface AdminStats {
   totalMembers: number;
@@ -220,6 +221,39 @@ const AdminDashboard: React.FC = () => {
             <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('GestionTab', { screen: 'ManageExercises' })}>
               <Ionicons name="fitness" size={20} color={COLORS.white} />
               <Text style={styles.actionButtonText}>Agregar Ejercicio</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: '#FF9800' }]} 
+              onPress={async () => {
+                try {
+                  await authService.updateExistingUsers();
+                  alert('Usuarios actualizados correctamente');
+                } catch (error) {
+                  alert('Error actualizando usuarios: ' + error);
+                }
+              }}
+            >
+              <Ionicons name="refresh" size={20} color={COLORS.white} />
+              <Text style={styles.actionButtonText}>Actualizar Usuarios Existentes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: '#4CAF50' }]} 
+              onPress={async () => {
+                try {
+                  const currentUser = useSelector((state: RootState) => state.auth.user);
+                  if (currentUser?.uid) {
+                    await authService.renewMembership(currentUser.uid, 12); // 12 meses
+                    alert('Membresía renovada por 12 meses');
+                  } else {
+                    alert('No se pudo identificar el usuario actual');
+                  }
+                } catch (error) {
+                  alert('Error renovando membresía: ' + error);
+                }
+              }}
+            >
+              <Ionicons name="calendar" size={20} color={COLORS.white} />
+              <Text style={styles.actionButtonText}>Renovar Mi Membresía (12 meses)</Text>
             </TouchableOpacity>
           </View>
         </View>

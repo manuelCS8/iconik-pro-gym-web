@@ -13,41 +13,14 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 import ArtisticBackground from "../../components/ArtisticBackground";
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+// Google Sign-In removido
 
 const SignUpScreen: React.FC = () => {
-  const { signInWithGoogle, signUpWithEmail } = useAuth();
+  const { signUpWithEmail } = useAuth();
   const navigation = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
 
-  const onGoogleSignUp = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Verificar que Google Play Services esté disponible
-      await GoogleSignin.hasPlayServices();
-      
-      // Iniciar el proceso de sign-in
-      const { idToken } = await GoogleSignin.signIn();
-      
-      // Iniciar sesión con Firebase
-      await signInWithGoogle(idToken);
-      
-      Alert.alert("Éxito", "Registro con Google completado exitosamente");
-    } catch (error: any) {
-      console.error('Error en Google Sign-Up:', error);
-      
-      if (error.message?.includes('cancelado')) {
-        Alert.alert("Cancelado", "Registro cancelado por el usuario");
-      } else if (error.message?.includes('no autorizado')) {
-        Alert.alert("Error", "Usuario no autorizado. Contacta al administrador.");
-      } else {
-        Alert.alert("Error", "Error al registrar con Google. Intenta de nuevo.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Registro con Google removido
 
   const onEmailSignUp = () => {
     navigation.navigate("EmailSignUp" as never);
@@ -71,20 +44,7 @@ const SignUpScreen: React.FC = () => {
 
         {/* Registration Options */}
         <View style={styles.formContainer}>
-          {/* Google Sign Up Button */}
-          <TouchableOpacity 
-            style={[styles.googleButton, isLoading && styles.disabledButton]}
-            onPress={onGoogleSignUp}
-            disabled={isLoading}
-          >
-            <Image 
-              source={{uri: 'https://developers.google.com/identity/images/g-logo.png'}} 
-              style={styles.googleIcon}
-            />
-            <Text style={styles.googleButtonText}>
-              {isLoading ? 'Registrando...' : 'Registrate con Google'}
-            </Text>
-          </TouchableOpacity>
+          {/* Botón de registro con Google removido */}
 
           {/* Email Sign Up Button */}
           <TouchableOpacity 

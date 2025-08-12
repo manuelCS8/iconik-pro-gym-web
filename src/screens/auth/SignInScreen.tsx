@@ -15,10 +15,10 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
 import ArtisticBackground from "../../components/ArtisticBackground";
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+// Google Sign-In removido
 
 const SignInScreen: React.FC = () => {
-  const { signInWithEmail, signInWithGoogle } = useAuth();
+  const { signInWithEmail } = useAuth();
   const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,39 +65,7 @@ const SignInScreen: React.FC = () => {
     }
   };
 
-  const onGoogleSignIn = async () => {
-    if (!acceptTerms) {
-      Alert.alert("Error", "Debes aceptar los términos y condiciones.");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      
-      // Verificar que Google Play Services esté disponible
-      await GoogleSignin.hasPlayServices();
-      
-      // Iniciar el proceso de sign-in
-      const { idToken } = await GoogleSignin.signIn();
-      
-      // Iniciar sesión con Firebase
-      await signInWithGoogle(idToken);
-      Alert.alert("✅ Bienvenido", "Inicio de sesión con Google exitoso");
-      // Alert.alert("✅ Bienvenido", "Inicio de sesión con Google exitoso");
-    } catch (error: any) {
-      console.error('Error en Google Sign-In:', error);
-      
-      if (error.message?.includes('cancelado')) {
-        Alert.alert("Cancelado", "Inicio de sesión cancelado por el usuario");
-      } else if (error.message?.includes('no autorizado')) {
-        Alert.alert("Error", "Usuario no autorizado. Contacta al administrador.");
-      } else {
-        Alert.alert("Error", "Error al iniciar sesión con Google. Intenta de nuevo.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Google Sign-In removido
 
   return (
     <SafeAreaView style={styles.container}>
@@ -167,20 +135,7 @@ const SignInScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
 
-            {/* Google Sign In Button */}
-            <TouchableOpacity 
-              style={[styles.googleButton, isLoading && styles.disabledButton]}
-              onPress={onGoogleSignIn}
-              disabled={isLoading}
-            >
-              <Image 
-                source={{uri: 'https://developers.google.com/identity/images/g-logo.png'}} 
-                style={styles.googleIcon}
-              />
-              <Text style={styles.googleButtonText}>
-                {isLoading ? 'Iniciando...' : 'Iniciar Sesión Con Google'}
-              </Text>
-            </TouchableOpacity>
+            {/* Botón de Google removido */}
 
             {/* Login Button */}
             <TouchableOpacity 

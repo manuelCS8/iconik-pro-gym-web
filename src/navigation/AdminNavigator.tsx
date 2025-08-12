@@ -8,6 +8,7 @@ import ManageExercisesScreen from '../screens/admin/ManageExercisesScreen';
 import ManageRoutinesScreen from '../screens/admin/ManageRoutinesScreen';
 import ProfileScreen from '../screens/member/ProfileScreen'; // Los admins también tienen perfil
 import AdminManagementScreen from '../screens/admin/AdminManagementScreen';
+import PendingUsersScreen from '../screens/admin/PendingUsersScreen';
 import ExerciseVideoScreen from '../screens/member/ExerciseVideoScreen';
 import MigrateVideosScreen from '../screens/admin/MigrateVideosScreen';
 import MigrateImagesScreen from '../screens/admin/MigrateImagesScreen';
@@ -50,6 +51,15 @@ const GestionStack = () => (
       options={{
         headerShown: true,
         title: 'Crear Usuario',
+        headerBackTitle: 'Atrás'
+      }}
+    />
+    <Stack.Screen 
+      name="PendingUsers" 
+      component={PendingUsersScreen}
+      options={{
+        headerShown: true,
+        title: 'Usuarios Pendientes',
         headerBackTitle: 'Atrás'
       }}
     />

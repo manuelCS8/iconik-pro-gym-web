@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -20,7 +21,7 @@ const LoginScreen: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, loading } = useAuth();
+  const { signInWithEmail, signUpWithEmail, loading } = useAuth();
   const navigation = useNavigation();
 
   const handleEmailAuth = async () => {
@@ -42,14 +43,7 @@ const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-      Alert.alert('Éxito', 'Sesión iniciada con Google exitosamente');
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
+  // Google Sign-In removido
 
   const toggleSignUpMode = () => {
     setIsSignUp(!isSignUp);
@@ -88,10 +82,11 @@ const LoginScreen: React.FC = () => {
             <Text style={styles.label}>Contraseña</Text>
             <View style={styles.passwordContainer}>
               <TextInput
-                style={[styles.input, styles.passwordInput]}
+                style={[styles.input, styles.passwordInput, styles.passwordInputText]}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="••••••••"
+                placeholderTextColor="#ff9b9b"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -100,9 +95,11 @@ const LoginScreen: React.FC = () => {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Text style={styles.eyeButtonText}>
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
-                </Text>
+                <Ionicons 
+                  name={showPassword ? "eye-off" : "eye"} 
+                  size={20} 
+                  color="#666" 
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -121,19 +118,7 @@ const LoginScreen: React.FC = () => {
             )}
           </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>o</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, styles.googleButton]}
-            onPress={handleGoogleSignIn}
-            disabled={loading}
-          >
-            <Text style={styles.googleButtonText}>🚀 Continuar con Google</Text>
-          </TouchableOpacity>
+          {/* Botón de Google removido */}
 
           <TouchableOpacity
             style={styles.switchButton}
@@ -145,6 +130,16 @@ const LoginScreen: React.FC = () => {
                 ? '¿Ya tienes cuenta? Inicia sesión' 
                 : '¿No tienes cuenta? Regístrate'
               }
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.completeRegistrationButton}
+            onPress={() => navigation.navigate('CompleteRegistration' as never)}
+            disabled={loading}
+          >
+            <Text style={styles.completeRegistrationButtonText}>
+              🔐 Completar Registro Pendiente
             </Text>
           </TouchableOpacity>
         </View>
@@ -219,11 +214,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  passwordInputText: {
+    color: '#ff4444',
+  },
   eyeButton: {
     padding: 8,
-  },
-  eyeButtonText: {
-    fontSize: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   button: {
     borderRadius: 8,
@@ -270,6 +267,18 @@ const styles = StyleSheet.create({
   },
   switchButtonText: {
     color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  completeRegistrationButton: {
+    alignItems: 'center',
+    padding: 12,
+    marginTop: 8,
+    backgroundColor: '#FF9800',
+    borderRadius: 8,
+  },
+  completeRegistrationButtonText: {
+    color: '#fff',
     fontSize: 14,
     fontWeight: '500',
   },

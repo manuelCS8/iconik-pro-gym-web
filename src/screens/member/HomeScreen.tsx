@@ -10,6 +10,9 @@ import ArtisticBackground from "../../components/ArtisticBackground";
 import SparklineTraining from "../../components/SparklineTraining";
 import { useTabBarVisibility } from "../../hooks/useTabBarVisibility";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import trainingHistoryService from "../../services/trainingHistoryService";
 
 const windowWidth = Dimensions.get("window").width;
 
@@ -23,7 +26,8 @@ interface TrainingStats {
 
 const HomeScreen: React.FC = () => {
   const { colors } = useTheme();
-  const { uid, name: userNameFromRedux } = useSelector((state: RootState) => state.auth);
+  const navigation = useNavigation();
+  const { uid, name: userNameFromRedux, displayName, user } = useSelector((state: RootState) => state.auth);
   const insets = useSafeAreaInsets();
   const [userName, setUserName] = useState<string>("");
   const [membershipEnd, setMembershipEnd] = useState<string>("");
@@ -61,41 +65,42 @@ const HomeScreen: React.FC = () => {
         // Inicializar servicio de sincronización
         syncService.initialize();
         
-        // 1. Cargar información del usuario
-        setUserName(userNameFromRedux || "Usuario Demo");
+        // 1. Cargar información del usuario desde Redux
+        const realUserName = displayName || userNameFromRedux || "Usuario";
+        setUserName(realUserName);
         
-        try {
-          const userDocRef = doc(firestore, "users", uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUserName(data.name || userNameFromRedux || "Usuario Demo");
-            setMembershipEnd(data.membershipEnd);
-          }
-        } catch (error) {
-          console.log("Usuario en modo mock:", error);
-          // Usar datos demo para mock
+        // 2. Obtener fecha de vencimiento de membresía desde Redux
+        console.log("🔍 Debug - User data from Redux:", {
+          membershipEnd: user?.membershipEnd,
+          user: user
+        });
+        
+        if (user?.membershipEnd) {
+          console.log("✅ Setting membership end from Redux:", user.membershipEnd);
+          setMembershipEnd(user.membershipEnd);
+        } else {
+          console.log("⚠️ No membership end found, using fallback date");
+          // Fallback: usar fecha demo si no hay datos
           setMembershipEnd(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
         }
 
-        // 2. Calcular estadísticas de entrenamiento
+        // 3. Calcular estadísticas reales de entrenamiento
         await calculateTrainingStats();
 
-        // 3. Seleccionar frase motivacional aleatoria
+        // 4. Seleccionar frase motivacional aleatoria
         const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
         setMotivationalText(randomQuote);
 
       } catch (error) {
         console.error("Error loading user info:", error);
-        // Fallback para modo demo
-        setUserName(userNameFromRedux || "Usuario Demo");
-        setMembershipEnd(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
+        // Fallback con datos básicos
+        setUserName(displayName || userNameFromRedux || "Usuario");
         setStats({
-          todayWorkouts: 1,
-          todayVolume: 5500,
-          totalWorkouts: 12,
-          totalVolume: 48000,
-          streak: 3
+          todayWorkouts: 0,
+          todayVolume: 0,
+          totalWorkouts: 0,
+          totalVolume: 0,
+          streak: 0
         });
         setMotivationalText(motivationalQuotes[0]);
       } finally {
@@ -105,107 +110,66 @@ const HomeScreen: React.FC = () => {
 
     const calculateTrainingStats = async () => {
       try {
-        // Fechas para filtrar
+        // Usar el servicio de historial de entrenamiento
+        const userStats = await trainingHistoryService.getUserStats(uid);
+        
+        // Obtener sesiones de entrenamiento
+        const trainingSessions = await trainingHistoryService.getTrainingSessions(uid);
+        
+        // Calcular estadísticas de hoy
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // Query para records del usuario
-        const recordsRef = collection(firestore, "records");
-        const userRecordsQuery = query(recordsRef, where("userId", "==", uid));
-        const recordsSnapshot = await getDocs(userRecordsQuery);
         
         let todayWorkouts = 0;
         let todayVolume = 0;
-        let totalWorkouts = 0;
-        let totalVolume = 0;
-        const workoutDates = new Set<string>();
-
-        recordsSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          const timestamp = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
-          const weight = data.weight || 0;
-          const reps = data.reps || 0;
-          const volume = weight * reps;
-
-          // Total acumulado
-          totalVolume += volume;
-          
-          // Contar días únicos de entrenamiento
-          const dateKey = timestamp.toDateString();
-          workoutDates.add(dateKey);
-
-          // Estadísticas de hoy
-          if (timestamp >= today && timestamp < tomorrow) {
-            todayVolume += volume;
-          }
+        
+        // Filtrar sesiones de hoy
+        const todaySessions = trainingSessions.filter(session => {
+          const sessionDate = new Date(session.date);
+          return sessionDate >= today && sessionDate < tomorrow;
         });
-
-        // Contar entrenamientos únicos de hoy
-        const todayKey = today.toDateString();
-        if (workoutDates.has(todayKey)) {
-          todayWorkouts = 1; // Simplificado: 1 entrenamiento por día
-        }
-
-        totalWorkouts = workoutDates.size;
-
-        // Calcular racha (días consecutivos)
-        const streak = calculateStreak(Array.from(workoutDates).sort());
+        
+        todayWorkouts = todaySessions.length;
+        todayVolume = todaySessions.reduce((total, session) => total + session.volume, 0);
 
         setStats({
           todayWorkouts,
           todayVolume,
-          totalWorkouts,
-          totalVolume,
-          streak
+          totalWorkouts: userStats.totalSessions,
+          totalVolume: userStats.totalVolume,
+          streak: userStats.streak
         });
 
       } catch (error) {
-        console.log("Error calculating stats (using mock):", error);
-        // Usar datos demo si no hay conexión a Firestore
+        console.log("Error calculating stats:", error);
+        // Fallback con datos básicos
         setStats({
-          todayWorkouts: Math.random() > 0.5 ? 1 : 0,
-          todayVolume: Math.floor(Math.random() * 8000) + 2000,
-          totalWorkouts: Math.floor(Math.random() * 20) + 5,
-          totalVolume: Math.floor(Math.random() * 50000) + 20000,
-          streak: Math.floor(Math.random() * 7) + 1
+          todayWorkouts: 0,
+          todayVolume: 0,
+          totalWorkouts: 0,
+          totalVolume: 0,
+          streak: 0
         });
       }
     };
 
-    const calculateStreak = (sortedDates: string[]): number => {
-      if (sortedDates.length === 0) return 0;
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      let streak = 0;
-      let currentDate = new Date(today);
-
-      // Verificar desde hoy hacia atrás
-      for (let i = 0; i < 30; i++) { // Máximo 30 días
-        const dateKey = currentDate.toDateString();
-        if (sortedDates.includes(dateKey)) {
-          streak++;
-        } else if (streak > 0) {
-          break; // Si ya había racha y se rompe, parar
-        }
-        currentDate.setDate(currentDate.getDate() - 1);
-      }
-
-      return streak;
-    };
 
     loadUserInfo();
-  }, [uid, userNameFromRedux]);
+  }, [uid, userNameFromRedux, user]);
 
   // Formatear la fecha de membresía (ISO → DD/MM/YYYY)
   const formatDate = (isoDate: string) => {
     if (!isoDate) return "";
+    console.log("📅 Formatting date:", isoDate);
     const d = new Date(isoDate);
-    return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth()+1)
+    const formatted = `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth()+1)
       .toString()
       .padStart(2, "0")}/${d.getFullYear()}`;
+    console.log("📅 Formatted date:", formatted);
+    return formatted;
   };
 
   // Formatear volumen (ej: 5500 → "5.5K")
@@ -244,14 +208,14 @@ const HomeScreen: React.FC = () => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        {/* Logo centrado en la mancha gris */}
-        <View style={styles.logoSection}>
-          <Image 
-            source={require("../../assets/logo.png")} 
-            style={{ width: 180, height: 180, alignSelf: 'center', marginBottom: 0 }} 
-            resizeMode="contain" 
-          />
-        </View>
+                 {/* Logo centrado en la mancha gris */}
+         <View style={styles.logoSection}>
+           <Image 
+             source={require("../../assets/logo.png")} 
+             style={{ width: 260, height: 260, alignSelf: 'center', marginBottom: 0, marginTop: -20 }} 
+             resizeMode="contain" 
+           />
+         </View>
 
         {/* Estado de conexión (oculto visualmente pero funcional) */}
         <View style={styles.hiddenConnection}>
@@ -260,27 +224,23 @@ const HomeScreen: React.FC = () => {
 
         {/* Contenido principal */}
         <View style={styles.contentContainer}>
-          {/* Bienvenida en cuadro */}
-          <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeText}>¡Bienvenido a</Text>
-            <Text style={styles.welcomeBold}>ICONIK PRO GYM</Text>
-            {userName ? <Text style={styles.userName}>{userName}!</Text> : null}
-          </View>
+                     {/* Bienvenida en cuadro */}
+           <View style={styles.welcomeCard}>
+             <Text style={styles.welcomeText}>¡Bienvenido a</Text>
+             <Text style={styles.welcomeBold}>ICONIK PRO GYM</Text>
+           </View>
 
-          {/* Recordatorio de membresía */}
-          {membershipEnd ? (
-            <TouchableOpacity 
-              style={[styles.reminderBox, { 
-                borderLeftColor: getMembershipReminderColor() 
-              }]}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.reminderText}>
-                Recordatorio: Próximo pago de
-              </Text>
-              <Text style={[styles.reminderDate, { color: getMembershipReminderColor() }]}>Membresía es {formatDate(membershipEnd)}</Text>
-            </TouchableOpacity>
-          ) : null}
+                     {/* Recordatorio de membresía */}
+           <TouchableOpacity 
+             style={[styles.reminderBox, { 
+               borderLeftColor: colors.success 
+             }]}
+             activeOpacity={0.8}
+           >
+             <Text style={styles.reminderText}>
+               Recuerda pagar a tiempo tu membresía
+             </Text>
+           </TouchableOpacity>
 
           {/* Cards de estadísticas principales (2 cards como en el diseño) */}
           <View style={styles.mainStatsContainer}>
@@ -294,21 +254,7 @@ const HomeScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Estadísticas adicionales */}
-          <View style={styles.additionalStatsContainer}>
-            <View style={styles.additionalStatCard}>
-              <Text style={styles.additionalStatValue}>{stats.todayWorkouts}</Text>
-              <Text style={styles.additionalStatLabel}>Hoy</Text>
-            </View>
-            <View style={styles.additionalStatCard}>
-              <Text style={styles.additionalStatValue}>{formatVolume(stats.todayVolume)}</Text>
-              <Text style={styles.additionalStatLabel}>Volumen Hoy</Text>
-            </View>
-            <View style={styles.additionalStatCard}>
-              <Text style={styles.additionalStatValue}>{stats.streak}</Text>
-              <Text style={styles.additionalStatLabel}>Racha (días)</Text>
-            </View>
-          </View>
+          
 
           {/* Texto motivacional */}
           {motivationalText ? (
@@ -316,6 +262,31 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.quoteText}>{motivationalText}</Text>
             </View>
           ) : null}
+
+          {/* Botones de acción */}
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => {
+                navigation.navigate('EntrenarTab' as never, {
+                  screen: 'ExercisesList'
+                } as never);
+              }}
+            >
+              <Ionicons name="barbell-outline" size={24} color="#fff" />
+              <Text style={styles.actionButtonText}>Ejercicios</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => {
+                navigation.navigate('NutricionTab' as never);
+              }}
+            >
+              <Ionicons name="nutrition-outline" size={24} color="#fff" />
+              <Text style={styles.actionButtonText}>Nutrición</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
       
@@ -397,13 +368,7 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: "bold",
   },
-  userName: {
-    fontSize: 18,
-    marginTop: 4,
-    marginBottom: SIZES.margin,
-    color: '#ff4444',
-    fontWeight: 'bold',
-  },
+
   reminderBox: {
     borderRadius: 10,
     padding: SIZES.padding,
@@ -422,11 +387,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: '#666',
   },
-  reminderDate: {
-    fontSize: SIZES.fontRegular,
-    textAlign: "center",
-    fontWeight: 'bold',
-  },
+
   mainStatsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -457,36 +418,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: '#666',
   },
-  additionalStatsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginBottom: SIZES.margin,
-  },
-  additionalStatCard: {
-    borderRadius: 12,
-    padding: 16,
-    flex: 1,
-    marginHorizontal: 4,
-    alignItems: "center",
-    backgroundColor: '#FFFFFF',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  additionalStatValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: '#333',
-  },
-  additionalStatLabel: {
-    fontSize: SIZES.fontSmall - 1,
-    marginTop: 4,
-    textAlign: "center",
-    color: '#666',
-  },
+
   quoteBox: {
     borderRadius: 12,
     padding: SIZES.padding,
@@ -504,5 +436,27 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
     color: '#666',
+  },
+  actionButtonsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: SIZES.margin,
+  },
+     actionButton: {
+     flex: 1,
+     backgroundColor: '#ff4444',
+     borderRadius: 12,
+     padding: 20,
+     alignItems: "center",
+     marginHorizontal: 8,
+     flexDirection: "row",
+     justifyContent: "center",
+     gap: 8,
+   },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 

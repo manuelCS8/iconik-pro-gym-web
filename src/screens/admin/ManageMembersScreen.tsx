@@ -66,10 +66,11 @@ const ManageMembersScreen: React.FC = () => {
     phone: '',
   });
 
-  // Lógica para abrir el modal
-  const [renewMember, setRenewMember] = useState<Member | null>(null);
-  const [renewDate, setRenewDate] = useState('');
-  const [tolerancia, setTolerancia] = useState(false);
+  // Lógica para abrir el modal de edición
+  const [editMember, setEditMember] = useState<Member | null>(null);
+  const [renewMonths, setRenewMonths] = useState('1');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
 
   useEffect(() => {
     loadMembers();
@@ -85,21 +86,35 @@ const ManageMembersScreen: React.FC = () => {
       // Consulta real a Firestore
       const usersRef = collection(db, 'users');
       const snapshot = await getDocs(usersRef);
-      const membersFromFirestore: Member[] = snapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          name: data.displayName || data.name || '',
-          email: data.email || '',
-          role: data.role || 'MEMBER',
-          membershipStart: data.membershipStart || '',
-          membershipEnd: data.membershipEnd ? (typeof data.membershipEnd === 'string' ? data.membershipEnd.split('T')[0] : data.membershipEnd.toDate().toISOString().split('T')[0]) : '',
-          weight: data.weight,
-          height: data.height,
-          age: data.age,
-          phone: data.phone || '',
-        };
-      });
+      const membersFromFirestore: Member[] = snapshot.docs
+        .map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            name: data.displayName || data.name || '',
+            email: data.email || '',
+            role: data.role || 'MEMBER',
+            membershipStart: data.membershipStart || '',
+            membershipEnd: data.membershipEnd ? 
+              (typeof data.membershipEnd === 'string' ? 
+                data.membershipEnd.split('T')[0] : 
+                (data.membershipEnd && typeof data.membershipEnd.toDate === 'function' ? 
+                  data.membershipEnd.toDate().toISOString().split('T')[0] : 
+                  new Date(data.membershipEnd).toISOString().split('T')[0]
+                )
+              ) : '',
+            weight: data.weight,
+            height: data.height,
+            age: data.age,
+            phone: data.phone || '',
+          };
+        })
+        .filter(member => {
+          // Filtrar usuarios eliminados (isActive: false o deletedAt presente)
+          const userDoc = snapshot.docs.find(doc => doc.id === member.id);
+          const userData = userDoc?.data();
+          return userData?.isActive !== false && !userData?.deletedAt;
+        });
       setMembers(membersFromFirestore);
     } catch (error) {
       Alert.alert('Error', 'No se pudieron cargar los miembros.');
@@ -211,71 +226,71 @@ const ManageMembersScreen: React.FC = () => {
     }
   };
 
-  // Permitir renovar membresía y editar fecha manualmente
-  const handleRenewMembership = (member: Member) => {
-    setRenewMember(member);
-    setRenewDate(member.membershipEnd || '');
-    setTolerancia(false);
+  // Abrir modal de edición de perfil
+  const handleEditProfile = (member: Member) => {
+    setEditMember(member);
+    setRenewMonths('1');
   };
 
-  // Lógica para formatear la fecha mientras escribe, usando guiones
-  const formatRenewDate = (val: string) => {
-    const digits = val.replace(/\D/g, '');
-    let formatted = '';
-    if (digits.length <= 4) formatted = digits;
-    else if (digits.length <= 6) formatted = `${digits.slice(0,4)}-${digits.slice(4)}`;
-    else formatted = `${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}`;
-    return formatted;
-  };
-  const handleRenewDateInput = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0,8);
-    setRenewDate(digits);
-  };
-
-  const handleRenewModalSave = async () => {
-    if (!renewMember || !renewDate.match(/^\d{8}$/)) {
-      Alert.alert('Error', 'Fecha inválida. Usa el formato YYYYMMDD.');
+  // Renovar membresía por meses
+  const handleRenewMembership = async () => {
+    if (!editMember) return;
+    
+    const months = parseInt(renewMonths);
+    if (isNaN(months) || months < 1 || months > 60) {
+      Alert.alert('Error', 'Por favor ingresa un número válido de meses (1-60)');
       return;
     }
-    // Convierte a YYYY-MM-DD
-    const formattedDate = `${renewDate.slice(0,4)}-${renewDate.slice(4,6)}-${renewDate.slice(6,8)}`;
-    let newDate = new Date(formattedDate);
-    if (isNaN(newDate.getTime())) {
-      Alert.alert('Error', 'Fecha inválida.');
-      return;
-    }
-    if (tolerancia) {
-      newDate.setDate(newDate.getDate() + 3);
-    }
-    let attempts = 0;
-    const maxAttempts = 3;
-    let success = false;
-    let lastError = null;
-    while (attempts < maxAttempts && !success) {
-      try {
-        const userRef = doc(db, 'users', renewMember.id);
-        await updateDoc(userRef, {
-          membershipEnd: newDate.toISOString().split('T')[0],
-          isActive: true,
-        });
-        Alert.alert('Éxito', 'Membresía renovada');
-        setRenewMember(null);
-        loadMembers();
-        success = true;
-      } catch (error) {
-        lastError = error;
-        attempts++;
-        if (attempts < maxAttempts) {
-          await new Promise(res => setTimeout(res, 1000)); // espera 1 segundo antes de reintentar
-        }
-      }
-    }
-    if (!success) {
-      Alert.alert('Error', 'No se pudo renovar la membresía después de varios intentos. Por favor revisa tu conexión a internet e inténtalo de nuevo.');
+
+    try {
+      // Calcular nueva fecha de expiración
+      const currentEndDate = editMember.membershipEnd ? new Date(editMember.membershipEnd) : new Date();
+      const newEndDate = new Date(currentEndDate);
+      newEndDate.setMonth(newEndDate.getMonth() + months);
+
+      const userRef = doc(db, 'users', editMember.id);
+      await updateDoc(userRef, {
+        membershipEnd: newEndDate.toISOString().split('T')[0],
+        isActive: true,
+      });
+
+      Alert.alert('Éxito', `Membresía renovada por ${months} mes${months > 1 ? 'es' : ''}`);
+      setEditMember(null);
+      loadMembers();
+    } catch (error) {
+      console.error('Error renovando membresía:', error);
+      Alert.alert('Error', 'No se pudo renovar la membresía. Por favor intenta de nuevo.');
     }
   };
 
+  // Eliminar miembro
   const handleDeleteMember = (member: Member) => {
+    setMemberToDelete(member);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteMember = async () => {
+    if (!memberToDelete) return;
+
+    try {
+      const userRef = doc(db, 'users', memberToDelete.id);
+      await updateDoc(userRef, {
+        isActive: false,
+        deletedAt: new Date().toISOString(),
+      });
+
+      Alert.alert('Éxito', `${memberToDelete.name} ha sido eliminado`);
+      setShowDeleteConfirm(false);
+      setMemberToDelete(null);
+      loadMembers();
+    } catch (error) {
+      console.error('Error eliminando miembro:', error);
+      Alert.alert('Error', 'No se pudo eliminar el miembro. Por favor intenta de nuevo.');
+    }
+  };
+
+  // Función anterior de eliminación (ya no se usa)
+  const handleDeleteMemberOld = (member: Member) => {
     Alert.alert(
       "Eliminar Miembro",
       `¿Estás seguro de que quieres eliminar a ${member.name}? Esta acción no se puede deshacer.`,
@@ -321,11 +336,16 @@ const ManageMembersScreen: React.FC = () => {
           <Text style={styles.memberExpire}>Expira: {item.membershipEnd}</Text>
         )}
         {item.age && <Text style={styles.memberAge}>Edad: {item.age} años</Text>}
-        {/* Botón de renovar solo para miembros */}
+        {/* Botones de acción solo para miembros */}
         {!isAdmin && (
-          <TouchableOpacity style={styles.renewButton} onPress={() => handleRenewMembership(item)}>
-            <Text style={styles.renewButtonText}>Renovar</Text>
-          </TouchableOpacity>
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity style={styles.editButton} onPress={() => handleEditProfile(item)}>
+              <Text style={styles.editButtonText}>Editar Perfil</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteMember(item)}>
+              <Text style={styles.deleteButtonText}>Eliminar</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -336,7 +356,7 @@ const ManageMembersScreen: React.FC = () => {
       requiredRole="ADMIN" 
       fallbackMessage="Solo los administradores pueden gestionar miembros del gimnasio."
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: '#000' }]}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#181818', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
         <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#fff' }}>Gestión de Miembros</Text>
@@ -410,26 +430,24 @@ const ManageMembersScreen: React.FC = () => {
           </ScrollView>
         </View>
         
-        {/* 1. Quitar la barra negra de 'miembros encontrados' y asegurar fondo negro */}
-        {/* <Text style={styles.resultsText}>{filteredMembers.length} miembros encontrados</Text> */}
+        {/* Contenido de filtros */}
       </View>
 
       {/* Lista de miembros */}
       <FlatList
-        data={members}
+        data={filteredMembers}
         renderItem={renderMember}
         keyExtractor={item => item.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        // Remover RefreshControl temporalmente para evitar el error de texto suelto
-        // refreshControl={
-        //   <RefreshControl 
-        //     refreshing={isRefreshing} 
-        //     onRefresh={onRefresh}
-        //     colors={[COLORS.primary]}
-        //     tintColor={COLORS.primary}
-        //   />
-        // }
+        refreshControl={
+          <RefreshControl 
+            refreshing={isRefreshing} 
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={64} color={COLORS.gray} />
@@ -587,33 +605,104 @@ const ManageMembersScreen: React.FC = () => {
         </View>
       </Modal>
 
-      {/* Modal de renovación */}
-      <Modal visible={!!renewMember} transparent animationType="slide" onRequestClose={() => setRenewMember(null)}>
+      {/* Modal de edición de perfil */}
+      <Modal visible={!!editMember} transparent animationType="slide" onRequestClose={() => setEditMember(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: '#181818', borderRadius: 16, padding: 24, width: '90%' }}>
-            <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 12 }}>Renovar Membresía</Text>
-            <Text style={{ color: '#ccc', marginBottom: 8 }}>Miembro: {renewMember?.name}</Text>
-            <Text style={{ color: '#ccc', marginBottom: 8 }}>Fecha de inscripción: {renewMember?.membershipStart || 'N/A'}</Text>
-            <Text style={{ color: '#fff', marginBottom: 4 }}>Nueva fecha de expiración:</Text>
-            <TextInput
-              style={{ borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#222', color: '#fff', marginBottom: 12 }}
-              value={formatRenewDate(renewDate)}
-              onChangeText={handleRenewDateInput}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#888"
-              keyboardType="numeric"
-              maxLength={10}
-            />
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Switch value={tolerancia} onValueChange={setTolerancia} thumbColor={tolerancia ? '#ff4444' : '#888'} trackColor={{ true: '#ff4444', false: '#333' }} />
-              <Text style={{ color: '#ccc', marginLeft: 8 }}>Agregar tolerancia de 3 días</Text>
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 12 }}>Editar Perfil</Text>
+            <Text style={{ color: '#ccc', marginBottom: 8 }}>Miembro: {editMember?.name}</Text>
+            <Text style={{ color: '#ccc', marginBottom: 8 }}>Email: {editMember?.email}</Text>
+            <Text style={{ color: '#ccc', marginBottom: 8 }}>Fecha actual de expiración: {editMember?.membershipEnd || 'N/A'}</Text>
+            
+            <Text style={{ color: '#fff', marginBottom: 8, marginTop: 16 }}>Renovar membresía por:</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <TextInput
+                style={{ 
+                  borderWidth: 1, 
+                  borderColor: '#333', 
+                  borderRadius: 8, 
+                  padding: 12, 
+                  fontSize: 16, 
+                  backgroundColor: '#222', 
+                  color: '#fff', 
+                  flex: 1,
+                  marginRight: 8
+                }}
+                value={renewMonths}
+                onChangeText={setRenewMonths}
+                placeholder="1"
+                placeholderTextColor="#888"
+                keyboardType="numeric"
+                maxLength={2}
+              />
+              <Text style={{ color: '#ccc', fontSize: 16 }}>meses</Text>
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <TouchableOpacity style={{ marginRight: 16 }} onPress={() => setRenewMember(null)}>
-                <Text style={{ color: '#ccc', fontWeight: 'bold' }}>Cancelar</Text>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity 
+                style={{ 
+                  backgroundColor: '#666', 
+                  borderRadius: 8, 
+                  paddingHorizontal: 20, 
+                  paddingVertical: 10 
+                }} 
+                onPress={() => setEditMember(null)}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={{ backgroundColor: '#ff4444', borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10 }} onPress={handleRenewModalSave}>
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Guardar</Text>
+              <TouchableOpacity 
+                style={{ 
+                  backgroundColor: '#ff4444', 
+                  borderRadius: 8, 
+                  paddingHorizontal: 20, 
+                  paddingVertical: 10 
+                }} 
+                onPress={handleRenewMembership}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Renovar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmación de eliminación */}
+      <Modal visible={showDeleteConfirm} transparent animationType="fade" onRequestClose={() => setShowDeleteConfirm(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#181818', borderRadius: 16, padding: 24, width: '90%' }}>
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 12 }}>Confirmar Eliminación</Text>
+            <Text style={{ color: '#ccc', marginBottom: 8 }}>
+              ¿Estás seguro de que quieres eliminar a <Text style={{ color: '#ff4444', fontWeight: 'bold' }}>{memberToDelete?.name}</Text>?
+            </Text>
+            <Text style={{ color: '#ff4444', marginBottom: 16, fontSize: 14 }}>
+              ⚠️ Esta acción no se puede revertir
+            </Text>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity 
+                style={{ 
+                  backgroundColor: '#666', 
+                  borderRadius: 8, 
+                  paddingHorizontal: 20, 
+                  paddingVertical: 10 
+                }} 
+                onPress={() => {
+                  setShowDeleteConfirm(false);
+                  setMemberToDelete(null);
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ 
+                  backgroundColor: '#ff4444', 
+                  borderRadius: 8, 
+                  paddingHorizontal: 20, 
+                  paddingVertical: 10 
+                }} 
+                onPress={confirmDeleteMember}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Eliminar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -726,6 +815,7 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+    backgroundColor: '#000',
   },
   listContent: {
     padding: SIZES.padding,
@@ -932,15 +1022,35 @@ const styles = StyleSheet.create({
     color: '#ccc',
     marginTop: SIZES.margin / 2,
   },
-  renewButton: {
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: SIZES.margin / 2,
+  },
+  editButton: {
     backgroundColor: '#ff4444',
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.padding / 2,
     borderRadius: SIZES.radius,
     alignItems: 'center',
-    marginTop: SIZES.margin / 2,
+    flex: 1,
+    marginRight: SIZES.margin / 2,
   },
-  renewButtonText: {
+  editButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: SIZES.fontSmall,
+  },
+  deleteButton: {
+    backgroundColor: '#333',
+    paddingHorizontal: SIZES.padding,
+    paddingVertical: SIZES.padding / 2,
+    borderRadius: SIZES.radius,
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: SIZES.margin / 2,
+  },
+  deleteButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: SIZES.fontSmall,
