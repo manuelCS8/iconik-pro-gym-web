@@ -9,7 +9,7 @@ const HUGGING_FACE_TOKEN = process.env.EXPO_PUBLIC_HUGGING_FACE_TOKEN || '';
 
 // Configuración de OpenAI
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_API_KEY = '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';
+const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
 
 // Debug: Verificar si la API key se está leyendo correctamente
 console.log('🔑 OpenAI API Key configurada:', OPENAI_API_KEY ? 'SÍ' : 'NO');
